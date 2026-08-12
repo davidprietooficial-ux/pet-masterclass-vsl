@@ -69,18 +69,31 @@
 
         var params = new URLSearchParams(location.search);
 
+        var vista = params.get('vista');
+
         // ?vista=inicio — fuerza el estado de recién llegado aunque este
         // navegador ya tenga el pitch desbloqueado de una visita anterior.
         // Es para poder revisar la página como la ve alguien que entra por
         // primera vez, sin tener que borrar el almacenamiento a mano. No se
         // documenta en la interfaz: es solo para quien construye el sitio.
-        if (params.get('vista') === 'inicio') {
+        if (vista === 'inicio') {
           try {
             localStorage.removeItem('pet-vsl-pitch');
             localStorage.removeItem('pet-oferta-fin');
             localStorage.removeItem('pet-vsl-progreso:masterclass');
           } catch (e) {}
           return; // se queda bloqueada
+        }
+
+        // ?vista=desplegada — el espejo: la página tal como queda cuando el
+        // visitante ya llegó al minuto del pitch, sin tener que ver el video
+        // entero para revisarla.
+        if (vista === 'desplegada') {
+          try {
+            localStorage.setItem('pet-vsl-pitch', '1');
+          } catch (e) {}
+          raiz.classList.remove('pitch-bloqueado');
+          return;
         }
 
         try {
@@ -413,15 +426,24 @@
                  del usuario el navegador silencia cualquier reproducción, así
                  que ese clic es lo que compra el permiso del audio. -->
             <div class="vsl__portada vsl__vidrio" data-vsl-portada>
-              <p class="vsl__aviso">
+              <!-- Dos copys para la misma portada. El de urgencia solo tiene
+                   sentido para quien no ha visto la clase; a quien vuelve
+                   con la oferta ya desplegada, decirle que se la está
+                   perdiendo es incoherente y le resta credibilidad a todo lo
+                   demás. lib/reproductor.ts alterna entre los dos según el
+                   estado del pitch. -->
+              <p class="vsl__aviso" data-vsl-aviso="primera-vez">
                 TE ESTÁS PERDIENDO DE LA CLASE EN VIVO,<br />DALE CLICK AHORA…
+              </p>
+              <p class="vsl__aviso" data-vsl-aviso="ya-vista" hidden>
+                YA VISTE ESTA CLASE.<br />PUEDES VOLVER A VERLA CUANDO QUIERAS.
               </p>
 
               <button type="button" class="vsl__arrancar" data-vsl-arrancar>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                   <path d="M8 5v14l11-7z" />
                 </svg>
-                Ver la masterclass
+                <span data-vsl-arrancar-texto>Ver la masterclass</span>
               </button>
 
               <p class="vsl__pie">

@@ -34,6 +34,7 @@
  */
 
 import { UMBRAL_RETOMAR_SEG } from '../datos/vsl';
+import { pitchYaDesbloqueado } from './pitch';
 
 const CLAVE_PROGRESO = 'pet-vsl-progreso';
 
@@ -245,6 +246,18 @@ function iniciarUnReproductor(contenedor: HTMLElement): void {
   // Recién ahora: la portada y los listeners ya están enganchados, así que
   // ya hay una forma propia de reproducir el video.
   video.removeAttribute('controls');
+
+  // Si el visitante ya llegó al pitch en una visita anterior, la portada
+  // cambia de copy: el "te lo estás perdiendo" solo sirve para quien no ha
+  // visto la clase. Con la oferta ya desplegada debajo, ese mensaje se
+  // contradice con lo que el visitante está viendo.
+  if (pitchYaDesbloqueado()) {
+    contenedor.querySelectorAll<HTMLElement>('[data-vsl-aviso]').forEach((aviso) => {
+      aviso.hidden = aviso.dataset.vslAviso !== 'ya-vista';
+    });
+    const rotulo = contenedor.querySelector<HTMLElement>('[data-vsl-arrancar-texto]');
+    if (rotulo) rotulo.textContent = 'Volver a ver la clase';
+  }
 
   contenedor.classList.add('vsl--previa');
   arrancarPrevia();
