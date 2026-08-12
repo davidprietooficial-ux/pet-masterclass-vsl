@@ -14,16 +14,19 @@ body {
   color: var(--texto-principal);
   /* El banner de oferta es fixed arriba — este aire evita que le tape el
      contenido al usuario, sobre todo el H1 (es el LCP). --banner-alto lo
-     mide lib/banner.ts con el alto real del banner (el texto envuelve
-     distinto según el ancho exacto, no en escalones limpios de 3 etapas,
-     y pasa a 0 solo cuando la oferta vence y el banner desaparece) — los
-     25px/38px de acá son solo el fallback sin JS (banner reducido ~30%,
-     2026-08-09). */
-  padding-top: var(--banner-alto, 25px);
+     mide lib/banner.ts con el alto real del banner: el texto envuelve
+     distinto según el ancho exacto, no en escalones limpios de 3 etapas.
+     Los valores de abajo NO son solo un fallback sin JS: son el hueco que se
+     reserva mientras la página está bloqueada y el banner todavía no existe
+     en pantalla. Con el hueco ya reservado, al desplegarse la oferta el
+     banner aparece dentro de él en vez de empujar todo el contenido hacia
+     abajo. Van holgados a propósito (pedido explícito: un poco más de aire
+     arriba en la vista de inicio). */
+  padding-top: var(--banner-alto, 44px);
 }
 @media (min-width: 768px) {
   body {
-    padding-top: var(--banner-alto, 38px);
+    padding-top: var(--banner-alto, 56px);
   }
 }
 
@@ -916,9 +919,13 @@ body.con-cta-flotante #consentimiento {
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  background: #128c7e;
-  color: #fff;
-  box-shadow: 0 4px 16px rgb(0 0 0 / 0.45);
+  background: #25d366;
+  color: #05140b;
+  /* El resplandor verde es lo que lo hace leerse como "neón" y no como un
+     círculo verde plano. */
+  box-shadow:
+    0 4px 16px rgb(0 0 0 / 0.45),
+    0 0 18px 2px color-mix(in srgb, #25d366 60%, transparent);
   transition:
     height var(--mov-normal) var(--mov-curva),
     width var(--mov-normal) var(--mov-curva),
@@ -927,7 +934,7 @@ body.con-cta-flotante #consentimiento {
     bottom var(--mov-normal) var(--mov-curva);
 }
 .wa-flotante:hover {
-  background: #0e6f64;
+  background: #1fbb59;
 }
 body.con-cta-flotante .wa-flotante {
   right: 0;
@@ -967,17 +974,53 @@ html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
  * break-inside: avoid es lo que impide que una cita se parta por la mitad
  * entre dos columnas.
  */
+/* Móvil: carrusel horizontal, igual que la fila de videos de testimonios.
+   Apiladas verticalmente, cinco citas largas obligan a un scroll enorme
+   justo en la pantalla donde el visitante debería estar viendo la clase;
+   en carrusel ocupan una sola altura y se recorren de lado.
+   Los márgenes negativos lo sacan del padding de .contenedor para que la
+   fila llegue al borde real de la pantalla, y el padding equivalente deja
+   la primera tarjeta alineada con el resto del contenido. */
 .testimonios-columnas {
-  columns: 1;
-  column-gap: var(--spacing-sm);
+  display: flex;
+  /* flex-start y no el stretch por defecto: con stretch, todas las tarjetas
+     se estiran a la altura de la cita más larga y bajo la de un renglón
+     ("Muchas gracias, está genial el curso") quedaba un hueco vacío de
+     varios cientos de píxeles. Cada una ocupa su alto real. */
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  margin-inline: calc(-1 * var(--spacing-md));
+  padding-inline: var(--spacing-md);
+  padding-bottom: var(--spacing-2xs);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.testimonios-columnas::-webkit-scrollbar {
+  display: none;
 }
 .testimonios-columnas > * {
-  break-inside: avoid;
-  margin-bottom: var(--spacing-sm);
+  flex: 0 0 82%;
+  scroll-snap-align: center;
 }
+
+/* Desde tablet vuelve a ser masonry: ahí sí hay ancho para verlas todas a
+   la vez, y las citas son de largos muy distintos (una es de un renglón,
+   otra de seis). En un grid las filas se igualan a la más alta y quedan
+   huecos enormes; con `columns` cada tarjeta ocupa solo su alto real. */
 @media (min-width: 768px) {
   .testimonios-columnas {
+    display: block;
     columns: 2;
+    column-gap: var(--spacing-sm);
+    overflow-x: visible;
+    margin-inline: 0;
+    padding-inline: 0;
+  }
+  .testimonios-columnas > * {
+    break-inside: avoid;
+    margin-bottom: var(--spacing-sm);
   }
 }
 @media (min-width: 1024px) {
@@ -1060,18 +1103,26 @@ html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
 }
 
 /* ── El mentor ───────────────────────────────────────────────────────
- * Móvil y tablet: foto arriba, texto debajo. Escritorio: dos columnas, la
- * foto a la izquierda con un ancho fijo para que no se estire.
+ * Escritorio: tres columnas — highlights a la izquierda, foto al centro,
+ * texto a la derecha (pedido explícito). La foto en el centro es la que
+ * ancla la composición; las cifras y el texto la flanquean.
+ *
+ * Móvil: una columna, y el ORDEN cambia — foto, highlights, y después el
+ * nombre y la bio. Las cifras pesan más que el texto largo en una pantalla
+ * pequeña: son lo que se lee de un vistazo, así que van antes del párrafo
+ * y no después. Se reordena con `order`, no moviendo nodos, para que el
+ * HTML mantenga el orden lógico de lectura.
  */
 .mentor {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
+  gap: var(--spacing-md);
   align-items: center;
 }
 @media (min-width: 1024px) {
   .mentor {
-    flex-direction: row;
+    display: grid;
+    grid-template-columns: 1fr auto 1.15fr;
     align-items: center;
     gap: var(--spacing-xl);
   }
@@ -1080,8 +1131,16 @@ html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
 .mentor__foto {
   position: relative;
   width: 100%;
-  max-width: 340px;
+  max-width: 300px;
   flex-shrink: 0;
+  order: 1;
+}
+@media (min-width: 1024px) {
+  .mentor__foto {
+    order: 0;
+    grid-column: 2;
+    max-width: 320px;
+  }
 }
 .mentor__foto img {
   display: block;
@@ -1101,21 +1160,66 @@ html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
   padding: var(--spacing-3xs) var(--spacing-sm);
   border-radius: 9999px;
   background: var(--color-primario);
-  color: #fff;
+  color: #0b0908;
   font-family: var(--font-cuerpo);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   white-space: nowrap;
   box-shadow: 0 6px 18px color-mix(in srgb, var(--color-primario) 45%, transparent);
 }
 
+/* ── Cifras ──────────────────────────────────────────────────────────
+ * En móvil van justo debajo de la foto (order: 2), antes del texto.
+ * En escritorio ocupan la columna izquierda.
+ */
+.mentor__cifras {
+  order: 2;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-sm);
+  width: 100%;
+  margin: var(--spacing-md) 0 0;
+  padding: 0;
+  border: 0;
+  text-align: center;
+}
+@media (min-width: 1024px) {
+  .mentor__cifras {
+    order: 0;
+    grid-column: 1;
+    grid-row: 1;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+    margin: 0;
+    text-align: right;
+  }
+}
+.mentor__cifra {
+  font-family: var(--font-display);
+  font-size: clamp(1.05rem, 0.9rem + 0.8vw, 1.45rem);
+  line-height: 1;
+  color: var(--color-primario);
+}
+.mentor__rotulo {
+  margin: var(--spacing-3xs) 0 0;
+  font-size: 0.68rem;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  color: var(--texto-secundario);
+}
+
+/* ── Texto ───────────────────────────────────────────────────────────  */
 .mentor__texto {
+  order: 3;
   width: 100%;
   text-align: center;
 }
 @media (min-width: 1024px) {
   .mentor__texto {
+    order: 0;
+    grid-column: 3;
+    grid-row: 1;
     text-align: left;
   }
 }
@@ -1140,26 +1244,14 @@ html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
   color: var(--texto-principal);
 }
 
-.mentor__cifras {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--spacing-sm);
+#mentor {
+  padding-bottom: var(--spacing-2xl);
+}
+
+.mentor__bio {
   margin: 0;
-  padding-top: var(--spacing-sm);
-  border-top: var(--borde-ancho) solid var(--linea);
-  text-align: left;
-}
-.mentor__cifra {
-  font-family: var(--font-display);
-  font-size: clamp(1.15rem, 0.95rem + 1vw, 1.6rem);
-  line-height: 1;
-  color: var(--color-primario);
-}
-.mentor__rotulo {
-  margin: var(--spacing-3xs) 0 0;
-  font-size: 0.7rem;
-  line-height: 1.3;
-  letter-spacing: 0.04em;
+  font-size: clamp(0.8rem, 0.72rem + 0.35vw, 0.92rem);
+  line-height: 1.65;
   color: var(--texto-secundario);
 }
 
@@ -1423,8 +1515,13 @@ html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
   gap: var(--spacing-2xs);
   padding: var(--spacing-2xs) var(--spacing-sm);
   border-radius: var(--radius-lg);
-  background: #128c7e; /* 4.6:1 con texto blanco — pasa AA */
-  color: #fff;
+  /* Verde neón de WhatsApp, no el verde apagado de antes (pedido
+     explícito). Con un verde tan luminoso el texto blanco ya no pasa
+     contraste (2.1:1), así que el texto va en casi-negro: 8.9:1. Mismo
+     truco que en el botón de compra naranja — para poder usar el color más
+     vivo hay que invertir el texto. */
+  background: #25d366;
+  color: #05140b;
   font-family: var(--font-cuerpo);
   font-size: clamp(0.72rem, 0.62rem + 0.5vw, 0.9rem);
   font-weight: 600;
@@ -1434,7 +1531,7 @@ html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
   transition: background var(--mov-rapido) var(--mov-curva);
 }
 .boton-whatsapp:hover {
-  background: #0e6f64;
+  background: #1fbb59;
 }
 
 

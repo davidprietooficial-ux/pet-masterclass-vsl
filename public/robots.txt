@@ -6,4 +6,4 @@ Allow: /
 Disallow: /api/
 Disallow: /panel-retencion/
 
-Sitemap: https://EJEMPLO.com/sitemap.xml
+Sitemap: https://plandeediciontotal.com/sitemap.xml

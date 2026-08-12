@@ -26,6 +26,7 @@ import { iniciarRetencion } from './lib/retencion';
 import { iniciarCtaFlotante } from './lib/cta-flotante';
 import { iniciarVolumen } from './lib/volumen';
 import { iniciarCheckout } from './lib/checkout';
+import { iniciarBannersVideo } from './lib/banner-video';
 import { iniciarTracking, registrarConversiones } from './lib/tracking';
 
 // ── Preguntas frecuentes ──────────────────────────────────────────────
@@ -92,6 +93,7 @@ function iniciar(): void {
   iniciarContadorEntradas();
   iniciarVideosTestimonios();
   iniciarVideoHero();
+  iniciarBannersVideo();
   actualizarAno();
 
   iniciarTracking();

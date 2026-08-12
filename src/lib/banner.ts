@@ -12,7 +12,26 @@ export function iniciarAltoBanner(): void {
   if (!banner) return;
 
   const fijarAlto = () => {
-    document.documentElement.style.setProperty('--banner-alto', `${banner.offsetHeight}px`);
+    const alto = banner.offsetHeight;
+
+    // Con alto 0 NO se toca la variable: mientras la página está bloqueada,
+    // el banner está en display:none y mide 0. Si se escribiera ese 0, el
+    // body perdería su padding superior y, al desplegarse la oferta, el
+    // banner empujaría todo el contenido hacia abajo de golpe — justo el
+    // salto que hay que evitar. Dejando el fallback del CSS, el hueco está
+    // reservado desde el principio y el banner solo aparece dentro de él.
+    //
+    // La excepción de verdad —oferta vencida, banner que desaparece para
+    // siempre— la cubre `data-oferta-estado`, que sí quita el elemento del
+    // flujo y ahí sí conviene recuperar el espacio; por eso se comprueba
+    // aparte y no por el alto.
+    if (alto > 0) {
+      document.documentElement.style.setProperty('--banner-alto', `${alto}px`);
+      return;
+    }
+
+    const vencida = banner.hidden;
+    if (vencida) document.documentElement.style.setProperty('--banner-alto', '0px');
   };
 
   fijarAlto();

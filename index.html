@@ -21,9 +21,7 @@
       name="description"
       content="Clase gratuita completa: cómo editar video con criterio profesional en Premiere Pro y CapCut. Se ve aquí mismo, sin registro y sin esperar a una fecha."
     />
-    <!-- PENDIENTE: dominio real de Hostinger. Aparece en canonical, og:url y
-         og:image, y en los dos bloques de JSON-LD de abajo. -->
-    <link rel="canonical" href="https://DOMINIO-PENDIENTE/" />
+    <link rel="canonical" href="https://plandeediciontotal.com/" />
 
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Masterclass gratis de edición de video" />
@@ -31,8 +29,8 @@
       property="og:description"
       content="La clase completa de edición profesional en Premiere Pro y CapCut, gratis y sin registro. Se ve aquí mismo."
     />
-    <meta property="og:url" content="https://DOMINIO-PENDIENTE/" />
-    <meta property="og:image" content="https://DOMINIO-PENDIENTE/og.jpg" />
+    <meta property="og:url" content="https://plandeediciontotal.com/" />
+    <meta property="og:image" content="https://plandeediciontotal.com/og.jpg" />
     <meta property="og:locale" content="es_CO" />
     <meta name="twitter:card" content="summary_large_image" />
 
@@ -99,7 +97,7 @@
         "@type": "Organization",
         "name": "Plan de Edición Total",
         "description": "Programa de 6 módulos para aprender edición de video profesional en Premiere Pro y CapCut.",
-        "url": "https://DOMINIO-PENDIENTE/"
+        "url": "https://plandeediciontotal.com/"
       }
     </script>
     <script type="application/ld+json">
@@ -226,10 +224,14 @@
     </div>
 
     <!-- ══ WhatsApp flotante ═════════════════════════════════════════
-         Burbuja en la esquina inferior derecha. Cuando el CTA baja a la
-         franja, este pasa a ser el 20% derecho de esa misma franja (ver
-         .wa-flotante en sitio.css): entre los dos ocupan el ancho completo
-         y ninguno tapa al otro.
+         Lleva `data-pitch`: en la vista de inicio no existe. Mientras el
+         visitante está viendo la clase no hay nada que preguntar todavía, y
+         una burbuja de soporte ahí solo compite con el único objetivo de esa
+         pantalla, que es darle play.
+
+         Cuando el CTA baja a la franja, este pasa a ser el 20% derecho de
+         esa misma franja (ver .wa-flotante en sitio.css): entre los dos
+         ocupan el ancho completo y ninguno tapa al otro.
 
          El mensaje va prellenado en el enlace, así que el visitante llega
          al chat con el contexto ya escrito y solo tiene que enviar. -->
@@ -240,6 +242,7 @@
       rel="noopener noreferrer"
       aria-label="Escribir por WhatsApp"
       data-wa-flotante
+      data-pitch
     >
       <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
         <path
@@ -595,6 +598,25 @@
       -->
       <section class="seccion" data-block="testimonials-previa" data-pre-pitch>
         <div class="contenedor flex flex-col items-center gap-[var(--spacing-md)]">
+          <!-- El banner abre la sección, encima del título. Mudo, en bucle
+               y sin controles: es una pieza gráfica en movimiento, no
+               contenido que se mire, y no compite con el audio de la clase
+               que está sonando arriba. Mismo ancho que las citas. -->
+          <video
+            class="banner-video"
+            muted
+            loop
+            playsinline
+            preload="none"
+            poster="/testimonios/banner-pet-poster.webp"
+            width="1600"
+            height="200"
+            aria-hidden="true"
+            data-banner-video
+          >
+            <source src="/testimonios/banner-pet.mp4" type="video/mp4" />
+          </video>
+
           <p
             class="text-[0.7rem] font-semibold tracking-[0.1em] uppercase"
             style="color: var(--color-primario)"
@@ -699,7 +721,9 @@
                 aprendido. Nos vemos adentro.
               </p>
 
-              <dl class="mentor__cifras">
+            </div>
+
+            <dl class="mentor__cifras">
                 <div>
                   <dt class="mentor__cifra">+2 MILLONES</dt>
                   <dd class="mentor__rotulo">DE DÓLARES<br />EN REVENUE</dd>
@@ -716,8 +740,8 @@
                   <dt class="mentor__cifra">+50</dt>
                   <dd class="mentor__rotulo">ALUMNOS<br />1 A 1</dd>
                 </div>
-              </dl>
-            </div>
+            </dl>
+
           </div>
         </div>
       </section>
@@ -1542,7 +1566,6 @@
       <section class="seccion-banner" data-block="banner" data-pitch>
         <video
           class="banner-video"
-          autoplay
           muted
           loop
           playsinline
@@ -1559,10 +1582,12 @@
     </main>
 
     <!-- ══ Pie ═══════════════════════════════════════════════════════
-         Réplica exacta del pie de pet-editagratis-form.vercel.app: legal
-         poco notorio, texto pequeño, las mismas 4 rutas.
+         Legal poco notorio, texto pequeño, las mismas 4 rutas.
+         SIN `data-pitch`: se ve también en la vista de inicio. Las páginas
+         legales tienen que ser alcanzables desde el primer momento, no solo
+         después de ver un video — es requisito, no preferencia.
     -->
-    <footer class="border-t border-[var(--linea)] py-[var(--spacing-lg)]" data-block="footer" data-pitch>
+    <footer class="border-t border-[var(--linea)] py-[var(--spacing-lg)]" data-block="footer">
       <div class="contenedor text-center">
         <!-- Cada enlace lleva una etiqueta corta y una larga: en pantallas
              angostas se ve la corta (así las 4 caben siempre en una sola
