@@ -704,12 +704,18 @@
               <span class="mentor__pildora">EDITOR EXPERTO · JUAN CAMILO</span>
             </div>
 
-            <div class="mentor__texto" data-revelar data-revelar-retraso="1">
+            <!-- Título y párrafo son hermanos y no un solo bloque: en móvil
+                 el orden es título → foto → cifras → párrafo, así que tienen
+                 que poder colocarse por separado. En escritorio vuelven a
+                 juntarse en la columna derecha. -->
+            <div class="mentor__titulo" data-revelar data-revelar-retraso="1">
               <p class="mentor__ojo">— TU MENTOR</p>
               <h2 class="font-display mentor__nombre">
                 SOY <span style="color: var(--color-primario)">JUAN CAMILO</span>
               </h2>
+            </div>
 
+            <div class="mentor__texto" data-revelar data-revelar-retraso="2">
               <p class="mentor__bio prosa">
                 ¡Hola, soy Juan! Quiero compartir contigo mis conocimientos en Marketing Digital,
                 edición de video e Inteligencia Artificial en esta clase en vivo. He generado más de

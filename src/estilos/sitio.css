@@ -1103,15 +1103,16 @@ html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
 }
 
 /* ── El mentor ───────────────────────────────────────────────────────
- * Escritorio: tres columnas — highlights a la izquierda, foto al centro,
- * texto a la derecha (pedido explícito). La foto en el centro es la que
- * ancla la composición; las cifras y el texto la flanquean.
+ * Escritorio: tres columnas — cifras a la izquierda, foto al centro, título
+ * y párrafo a la derecha. La foto en el centro ancla la composición.
  *
- * Móvil: una columna, y el ORDEN cambia — foto, highlights, y después el
- * nombre y la bio. Las cifras pesan más que el texto largo en una pantalla
- * pequeña: son lo que se lee de un vistazo, así que van antes del párrafo
- * y no después. Se reordena con `order`, no moviendo nodos, para que el
- * HTML mantenga el orden lógico de lectura.
+ * Móvil: una columna con el orden cambiado a título → foto → cifras →
+ * párrafo. El nombre va primero porque es lo que da contexto a la cara que
+ * viene debajo; y las cifras antes del párrafo porque pesan más que el texto
+ * largo en una pantalla pequeña: son lo que se lee de un vistazo.
+ *
+ * Todo el reordenado va con `order`, no moviendo nodos: el HTML mantiene el
+ * orden lógico de lectura para lectores de pantalla y para el rastreador.
  */
 .mentor {
   display: flex;
@@ -1122,23 +1123,41 @@ html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
 @media (min-width: 1024px) {
   .mentor {
     display: grid;
-    grid-template-columns: 1fr auto 1.15fr;
+    grid-template-columns: 1.1fr auto 1.1fr;
     align-items: center;
     gap: var(--spacing-xl);
   }
 }
 
+/* ── Título ──────────────────────────────────────────────────────────  */
+.mentor__titulo {
+  order: 1;
+  width: 100%;
+  text-align: center;
+}
+@media (min-width: 1024px) {
+  .mentor__titulo {
+    order: 0;
+    grid-column: 3;
+    grid-row: 1;
+    align-self: end;
+    text-align: left;
+  }
+}
+
+/* ── Foto ────────────────────────────────────────────────────────────  */
 .mentor__foto {
   position: relative;
+  order: 2;
   width: 100%;
   max-width: 300px;
   flex-shrink: 0;
-  order: 1;
 }
 @media (min-width: 1024px) {
   .mentor__foto {
     order: 0;
     grid-column: 2;
+    grid-row: 1 / span 2;
     max-width: 320px;
   }
 }
@@ -1147,7 +1166,11 @@ html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
   width: 100%;
   height: auto;
   border-radius: var(--radius-lg);
-  border: var(--borde-ancho) solid var(--linea);
+  /* Marco naranja de marca, del mismo grosor que el contorno de las tarjetas
+     de testimonio. Recorta la foto del fondo oscuro, que sin él se fundía
+     por las esquinas. */
+  border: var(--borde-ancho) solid var(--color-primario);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--color-primario) 22%, transparent);
 }
 
 /* La píldora del nombre monta sobre el borde inferior de la foto: ata el
@@ -1170,16 +1193,18 @@ html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
 }
 
 /* ── Cifras ──────────────────────────────────────────────────────────
- * En móvil van justo debajo de la foto (order: 2), antes del texto.
- * En escritorio ocupan la columna izquierda.
+ * Dos columnas SIEMPRE, también en escritorio: cuatro cifras apiladas en
+ * una sola columna dejaban la izquierda casi vacía y muy alta frente al
+ * bloque de texto de la derecha. En dos columnas el bloque queda del ancho
+ * y el alto del párrafo, y la composición se equilibra.
  */
 .mentor__cifras {
-  order: 2;
+  order: 3;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: var(--spacing-sm);
+  gap: var(--spacing-sm) var(--spacing-md);
   width: 100%;
-  margin: var(--spacing-md) 0 0;
+  margin: 0;
   padding: 0;
   border: 0;
   text-align: center;
@@ -1188,30 +1213,37 @@ html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
   .mentor__cifras {
     order: 0;
     grid-column: 1;
-    grid-row: 1;
-    grid-template-columns: 1fr;
-    gap: var(--spacing-md);
-    margin: 0;
-    text-align: right;
+    grid-row: 1 / span 2;
+    gap: var(--spacing-lg) var(--spacing-md);
+    /* Alineado a la derecha del bloque: las cifras quedan a la misma
+       distancia de la foto que el texto por el otro lado, en vez de pegadas
+       al borde de la pantalla con un hueco muerto en medio. */
+    justify-self: end;
+    max-width: 400px;
+    text-align: left;
   }
 }
 .mentor__cifra {
   font-family: var(--font-display);
-  font-size: clamp(1.05rem, 0.9rem + 0.8vw, 1.45rem);
-  line-height: 1;
+  /* Tope en 1.15rem: la tipografía de titulares es muy ancha (expanded), y
+     por encima de eso "+2 MILLONES" —la cifra más larga— se parte en dos
+     líneas y desalinea toda la rejilla. */
+  font-size: clamp(0.95rem, 0.85rem + 0.5vw, 1.15rem);
+  line-height: 1.05;
   color: var(--color-primario);
+  text-wrap: balance;
 }
 .mentor__rotulo {
   margin: var(--spacing-3xs) 0 0;
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   line-height: 1.3;
   letter-spacing: 0.04em;
   color: var(--texto-secundario);
 }
 
-/* ── Texto ───────────────────────────────────────────────────────────  */
+/* ── Párrafo ─────────────────────────────────────────────────────────  */
 .mentor__texto {
-  order: 3;
+  order: 4;
   width: 100%;
   text-align: center;
 }
@@ -1219,22 +1251,18 @@ html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
   .mentor__texto {
     order: 0;
     grid-column: 3;
-    grid-row: 1;
+    grid-row: 2;
+    align-self: start;
     text-align: left;
   }
 }
 
 .mentor__ojo {
-  margin: var(--spacing-md) 0 var(--spacing-3xs);
+  margin: 0 0 var(--spacing-3xs);
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.1em;
   color: var(--texto-secundario);
-}
-@media (min-width: 1024px) {
-  .mentor__ojo {
-    margin-top: 0;
-  }
 }
 
 .mentor__nombre {
@@ -1242,6 +1270,11 @@ html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
   font-size: clamp(1.5rem, 1.1rem + 2vw, 2.25rem);
   line-height: 1.1;
   color: var(--texto-principal);
+}
+@media (min-width: 1024px) {
+  .mentor__nombre {
+    margin-bottom: 0;
+  }
 }
 
 #mentor {
@@ -1277,12 +1310,28 @@ html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
  */
 .hero-fondo {
   position: sticky;
-  top: 0;
-  height: 100vh;
-  margin-top: calc(-1 * var(--seccion-y));
+  /* Sube por encima del hueco reservado para el banner de oferta, en vez de
+     empezar por debajo. Sin esto quedaba una franja negra del fondo del body
+     entre el borde de la pantalla y el video — el "banda negra arriba".
+     El margin-top negativo suma las dos cosas que hay que remontar: el
+     padding-block de .seccion y ese hueco del banner. Y el alto crece lo
+     mismo, para que el video siga llegando abajo hasta donde llegaba.
+     Cuando el banner aparece, se pinta encima (es fixed, z-50) sobre el
+     mismo video: el fondo no se mueve y los títulos tampoco, porque el hueco
+     ya estaba reservado desde el principio. */
+  top: calc(-1 * var(--banner-alto, 44px));
+  height: calc(100vh + var(--banner-alto, 44px));
+  margin-top: calc(-1 * (var(--seccion-y) + var(--banner-alto, 44px)));
   margin-bottom: -100vh;
   z-index: 0;
   background: var(--pagina-fondo);
+}
+@media (min-width: 768px) {
+  .hero-fondo {
+    top: calc(-1 * var(--banner-alto, 56px));
+    height: calc(100vh + var(--banner-alto, 56px));
+    margin-top: calc(-1 * (var(--seccion-y) + var(--banner-alto, 56px)));
+  }
 }
 .hero-fondo video {
   position: absolute;
