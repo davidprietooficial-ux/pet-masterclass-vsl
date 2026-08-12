@@ -27,6 +27,7 @@ import { iniciarCtaFlotante } from './lib/cta-flotante';
 import { iniciarVolumen } from './lib/volumen';
 import { iniciarCheckout } from './lib/checkout';
 import { iniciarBannersVideo } from './lib/banner-video';
+import { iniciarCifras } from './lib/cifras';
 import { iniciarTracking, registrarConversiones } from './lib/tracking';
 
 // ── Preguntas frecuentes ──────────────────────────────────────────────
@@ -85,6 +86,7 @@ function iniciar(): void {
 
   iniciarRevelado();
   iniciarContadores();
+  iniciarCifras();
   iniciarFaq();
   iniciarOferta();
   iniciarCheckout();

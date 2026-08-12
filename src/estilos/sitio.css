@@ -1214,12 +1214,16 @@ html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
     order: 0;
     grid-column: 1;
     grid-row: 1 / span 2;
-    gap: var(--spacing-lg) var(--spacing-md);
-    /* Alineado a la derecha del bloque: las cifras quedan a la misma
-       distancia de la foto que el texto por el otro lado, en vez de pegadas
-       al borde de la pantalla con un hueco muerto en medio. */
+    gap: var(--spacing-lg) var(--spacing-xl);
+    /* Columnas al ancho del contenido (`auto`) y el bloque pegado a la
+       derecha de su celda. Con columnas de 1fr, la segunda —"+15", "+50",
+       que son cortas— dejaba un hueco muerto entre el texto y la foto: el
+       bloque medía lo mismo que el de la derecha, pero el contenido real
+       terminaba mucho antes y el espacio a cada lado de la imagen no
+       coincidía. Así el hueco visible es el gap del grid a los dos lados. */
+    grid-template-columns: auto auto;
     justify-self: end;
-    max-width: 400px;
+    max-width: none;
     text-align: left;
   }
 }
@@ -1595,6 +1599,19 @@ html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
   background: #1fbb59;
 }
 
+
+/* Aire extra sobre el ojo y el titular. Va como padding del bloque y no
+   como margen del primer hijo: así empuja el grupo entero hacia abajo sin
+   colapsar contra el margen de la sección ni descuadrar el `gap` que separa
+   sus elementos entre sí. */
+.hero-encabezado {
+  padding-top: var(--spacing-md);
+}
+@media (min-width: 768px) {
+  .hero-encabezado {
+    padding-top: var(--spacing-lg);
+  }
+}
 
 /* ── Las dos redacciones del titular ─────────────────────────────────
  * Se alternan por CSS y no por JS: con JS habría un instante con el titular
