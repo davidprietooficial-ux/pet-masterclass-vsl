@@ -1,0 +1,151 @@
+/* ───────────────────────────────────────────────────────────────────
+ * ARCHIVO GENERADO — NO SE EDITA A MANO.
+ * ─────────────────────────────────────────────────────────────────── */
+
+@import "tailwindcss";
+@import "tailwind-animations";
+
+/* Las 3 etapas del proyecto: móvil sin prefijo, md a 768, lg a 1024.
+   sm/xl/2xl se anulan a propósito — si aparecen en el HTML, no compilan. */
+@theme {
+  --breakpoint-sm: initial;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: initial;
+  --breakpoint-2xl: initial;
+
+  --font-display: "Special Gothic Expanded One", system-ui, sans-serif;
+  --font-cuerpo: "Inter Tight", system-ui, -apple-system, sans-serif;
+
+  /* El cuerpo del sitio usa la tipografía de marca por defecto — no hace
+     falta poner .font-cuerpo en cada párrafo, solo .font-display donde
+     corresponda un titular. */
+  --default-font-family: var(--font-cuerpo);
+}
+
+@font-face {
+  font-family: "Special Gothic Expanded One";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fuentes/special-gothic-expanded-one.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Inter Tight";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fuentes/inter-tight-400.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Inter Tight";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fuentes/inter-tight-600.woff2") format("woff2");
+}
+
+:root {
+  color-scheme: dark;
+
+  /* ── Colores crudos del contrato ─────────────────────────────────── */
+  --color-primario: #ff6a00;
+  --color-primario-hover: #853700;
+  --color-primario-texto: #c25100;
+  --color-acento: #4ade80;
+  --color-fondo: #090807;
+  --color-superficie: #141210;
+  --color-superficie-elevada: #1c1815;
+  --color-borde: #3a3128;
+  --color-texto: #f5f1ea;
+  --color-texto-suave: #b8ab9c;
+  --color-exito: #4ade80;
+  --color-error: #f87171;
+  --color-aviso: #fbbf24;
+
+  /* ── Alias semánticos — lo que usa sitio.css/index.html ──────────── */
+  /* Tema oscuro: el naranja vivo (primario) pasa AA de sobra como texto
+     sobre el fondo oscuro (5.58:1), así que --enlace lo usa directo — acá
+     no hace falta la versión oscurecida que sí hacía falta en tema claro.
+     El botón de compra sigue usando primario_texto de fondo: es blanco
+     sobre naranja (3.31:1 con el naranja vivo, no pasa), así que el
+     relleno del botón se queda en la versión oscurecida. */
+  --accion: var(--color-primario-texto);
+  --accion-hover: var(--color-primario-hover);
+  --accion-texto: #ffffff;
+  --enlace: var(--color-primario);
+  --enlace-glow: color-mix(in srgb, var(--color-primario) 75%, transparent);
+  --foco: var(--color-primario);
+  --foco-grosor: 3px;
+  --foco-halo: color-mix(in srgb, var(--color-primario) 35%, transparent);
+
+  --pagina-fondo: var(--color-fondo);
+  --tarjeta-fondo: var(--color-superficie);
+  --elevado-fondo: var(--color-superficie-elevada, var(--color-superficie));
+  --linea: var(--color-borde);
+  --texto-principal: var(--color-texto);
+  --texto-secundario: var(--color-texto-suave);
+  --texto-sobre-accion: var(--accion-texto);
+  --estado-exito: var(--color-exito);
+  --estado-error: var(--color-error);
+  --estado-aviso: var(--color-aviso);
+
+  /* ── Movimiento — constantes del sistema, no del contrato ────────── */
+  --mov-instante: 80ms;
+  --mov-rapido: 0.16s;
+  --mov-normal: 0.28s;
+  --mov-lento: 0.48s;
+  --mov-curva: cubic-bezier(0.4, 0, 0.2, 1);
+  --mov-curva-entrada: cubic-bezier(0, 0, 0.2, 1);
+  --mov-curva-salida: cubic-bezier(0.4, 0, 1, 1);
+
+  /* ── Forma ────────────────────────────────────────────────────────── */
+  --radius-sm: 0px;
+  --radius-md: 2px;
+  /* Sube de 4px a 12px: es el radio del reproductor del VSL y del botón de
+     compra, los dos elementos que el cliente pidió redondear más. No es un
+     cuarto radio — la escala sigue siendo de tres (0/2/12), como exige el
+     contrato; lo que cambió es a qué corresponde el escalón grande. Las
+     tarjetas, que antes usaban este, bajan a --radius-md para conservar las
+     esquinas casi rectas de la marca. */
+  --radius-lg: 12px;
+  --borde-ancho: 1px;
+
+  /* ── Espaciado ────────────────────────────────────────────────────── */
+  --spacing-3xs: 4px;
+  --spacing-2xs: 8px;
+  --spacing-xs: 12px;
+  --spacing-sm: 16px;
+  --spacing-md: 24px;
+  --spacing-lg: 32px;
+  --spacing-xl: 48px;
+  --spacing-2xl: 64px;
+  --spacing-3xl: 96px;
+
+  /* ── Medidas de componente — constantes del sistema ──────────────── */
+  --boton-alto: 44px;
+  --boton-padding-x: 24px;
+  --campo-alto: 44px;
+  --tarjeta-padding: var(--spacing-sm);
+  --tarjeta-padding-lg: var(--spacing-md);
+  --contenedor-max: 1200px;
+  --contenedor-texto-max: 68ch;
+  --navbar-alto: 64px;
+
+  /* ── Aire vertical entre secciones, por etapa ────────────────────── */
+  --seccion-y: 32px;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --seccion-y: 48px;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --seccion-y: 64px;
+  }
+}

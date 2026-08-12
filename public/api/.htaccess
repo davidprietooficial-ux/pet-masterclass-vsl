@@ -1,0 +1,22 @@
+# Solo el endpoint es alcanzable por web. Todo lo demás de esta carpeta —el
+# esquema SQL, la plantilla de config, y cualquier config-retencion.php que se
+# haya subido acá por error— queda bloqueado.
+#
+# Es defensa en profundidad, no la defensa principal: el config real va FUERA
+# del docroot (ver config-retencion.ejemplo.php). Esto cubre el caso de que
+# alguien lo deje donde no va.
+
+<FilesMatch "\.(sql|md|log)$">
+  Require all denied
+</FilesMatch>
+
+<FilesMatch "^config-retencion.*\.php$">
+  Require all denied
+</FilesMatch>
+
+<FilesMatch "\.ejemplo\.php$">
+  Require all denied
+</FilesMatch>
+
+# Sin listado de directorio.
+Options -Indexes

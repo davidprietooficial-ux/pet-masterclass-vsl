@@ -1,0 +1,1609 @@
+/* ───────────────────────────────────────────────────────────────────
+ * Estilos del sitio.
+ *
+ * tokens.css lo genera marca/tokens.mjs y NO se edita a mano.
+ * Este archivo sí: aquí van los patrones que usan esos tokens.
+ * ─────────────────────────────────────────────────────────────────── */
+
+/* Explícito a propósito: sin esto, el body hereda el fondo/texto por
+   defecto del user-agent según --color-scheme, no los tokens de marca. Es
+   como se coló el tema oscuro en una página que ya era clara — nunca más
+   depende de un valor implícito del navegador. */
+body {
+  background-color: var(--pagina-fondo);
+  color: var(--texto-principal);
+  /* El banner de oferta es fixed arriba — este aire evita que le tape el
+     contenido al usuario, sobre todo el H1 (es el LCP). --banner-alto lo
+     mide lib/banner.ts con el alto real del banner (el texto envuelve
+     distinto según el ancho exacto, no en escalones limpios de 3 etapas,
+     y pasa a 0 solo cuando la oferta vence y el banner desaparece) — los
+     25px/38px de acá son solo el fallback sin JS (banner reducido ~30%,
+     2026-08-09). */
+  padding-top: var(--banner-alto, 25px);
+}
+@media (min-width: 768px) {
+  body {
+    padding-top: var(--banner-alto, 38px);
+  }
+}
+
+/* Scroll suave para los anclas internas (el CTA → #precio) — respeta
+   prefers-reduced-motion, que se apaga aparte más abajo en este archivo. */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ── Bloque de precio/checkout — invisible a propósito ──────────────────
+ * Pedido explícito (2026-08-09, tras verlo resaltado en un color de
+ * diagnóstico): #precio solo existe para la estructura — envolver
+ * checkout + tarjeta de oferta en un mismo grid y darle a ambos el
+ * padding que el checkout cancela con sus márgenes negativos — no debe
+ * tener presencia visual propia. Selector por id: gana por especificidad
+ * al border/bg-[var(--elevado-fondo)] que sigue en las clases del HTML
+ * sin necesitar tocarlas ni usar !important.
+ */
+#precio {
+  background: transparent;
+  border-color: transparent;
+}
+
+/* ── Fondo degradado (secciones) ─────────────────────────────────────
+ * En vez de un color plano de sección, un degradé radial + lineal —
+ * mismo tratamiento que ya usaba el hero, ahora también en testimonios
+ * y preguntas frecuentes. Es la superficie sobre la que el vidrio de
+ * .tarjeta tiene algo real de qué desprenderse.
+ */
+.fondo-degradado {
+  position: relative;
+  background: var(--pagina-fondo);
+}
+.fondo-degradado::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--color-primario) 13%, transparent), transparent 60%),
+    linear-gradient(180deg, var(--tarjeta-fondo) 0%, var(--pagina-fondo) 100%);
+}
+.fondo-degradado > .contenedor {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Página bloqueada hasta el pitch ───────────────────────────────────
+ * Al entrar solo se ve el hero con el video; el resto ([data-pitch]) se
+ * despliega cuando el visitante llega al minuto del pitch. Ver lib/pitch.ts
+ * para el mecanismo completo.
+ *
+ * Las dos condiciones del selector no son adorno:
+ *
+ *   :not(.no-js) — si el JS está bloqueado, el inline del <head> nunca
+ *     quita `no-js`, este selector no aplica y la página se ve entera. Es
+ *     el fail-open del proyecto: nunca se pierde contenido por no poder
+ *     ejecutar JS, y el rastreador de Google ve todo igual.
+ *
+ *   display:none y no opacity/height — el contenido no ocupa espacio ni
+ *     puede recibir foco de teclado mientras está bloqueado, y al aparecer
+ *     no hay reflujo de algo que ya estaba midiendo (CLS < 0.1).
+ *
+ * Ambas clases vienen en el <html> del HTML servido, así que el estado
+ * queda resuelto antes del primer pintado: no hay destello de la página
+ * completa.
+ */
+html.pitch-bloqueado:not(.no-js) [data-pitch] {
+  display: none !important;
+}
+
+/* El espejo: `data-pre-pitch` se ve MIENTRAS la página está bloqueada y
+ * desaparece al desplegarse la oferta. Ocupa el hueco bajo el video durante
+ * la parte larga de la visita.
+ *
+ * Se oculta con `:not(.pitch-bloqueado)` y no con `.pitch-desbloqueado`
+ * porque así, sin JS, la clase nunca se quita, esta regla nunca aplica y la
+ * sección se ve — igual que todo lo demás. Un selector afirmativo la habría
+ * dejado visible pero acompañada del resto de la página, que es lo que sí
+ * quedaría raro. */
+html:not(.pitch-bloqueado) [data-pre-pitch] {
+  display: none !important;
+}
+
+/* Al desplegarse, entra con el mismo lenguaje de movimiento que el resto
+   del sitio en vez de aparecer de golpe. */
+@keyframes pitch-entrar {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+html:not(.pitch-bloqueado) [data-pitch]:not([data-cta-anclaje]) {
+  animation: pitch-entrar var(--mov-normal, 320ms) var(--mov-curva, cubic-bezier(0.22, 1, 0.36, 1)) both;
+}
+
+/* El anclaje del CTA se queda SIN animación de entrada, y no es un descuido:
+ * es la única forma de que el botón flotante funcione.
+ *
+ * Dos veces se intentó animarlo y las dos rompió el `position: fixed` del
+ * botón que lleva dentro, por motivos distintos pero de la misma familia:
+ *
+ *   con `transform` — el elemento se queda con una matriz aplicada (la
+ *     identidad, pero aplicada) por el fill-mode `both`. Un ancestro con
+ *     transform pasa a ser el marco de referencia del fixed, así que el
+ *     botón se anclaba al div en vez de a la pantalla y se iba ~800px por
+ *     debajo del borde inferior.
+ *
+ *   con `opacity` — no crea containing block, pero sí crea contexto de
+ *     apilamiento mientras la animación sigue aplicada. El botón quedaba
+ *     atrapado dentro de ese contexto: su z-index de 998 solo competía con
+ *     sus hermanos, no con el resto de la página, y cualquier sección
+ *     posterior se dibujaba encima y se comía los clics.
+ *
+ * El botón ya llama la atención de sobra con su propio latido; una animación
+ * de entrada aquí no aporta nada que valga romper esto.
+ */
+
+@media (prefers-reduced-motion: reduce) {
+  html:not(.pitch-bloqueado) [data-pitch] {
+    animation: none;
+  }
+}
+
+/* ── Tarjeta de oferta — mismo ancho que el checkout, solo en móvil ────
+ * Pedido explícito: no de alto (esa vuelta anterior se deshizo), de
+ * ancho — el mismo -mx-[var(--spacing-xl)] que ya usa el marco del
+ * checkout (cancela el padding de #precio Y el de .contenedor, borde a
+ * borde de pantalla), md:mx-0 lo vuelve a su ancho normal, contenido
+ * dentro de #precio, donde ya hay dos columnas.
+ *
+ * Ajustado a -spacing-md (2026-08-09, pedido explícito: "aumenta el
+ * margen horizontal"): ahora solo cancela el padding propio de #precio,
+ * no el de .contenedor — le queda el mismo aire lateral que el resto de
+ * la página en vez de ir borde a borde real de pantalla.
+ */
+[data-oferta-tarjeta] {
+  margin-inline: calc(-1 * var(--spacing-md));
+}
+@media (min-width: 768px) {
+  [data-oferta-tarjeta] {
+    margin-inline: 0;
+  }
+}
+
+/* ── Bono lateral de módulos ──────────────────────────────────────────
+ * Con oferta activa: columna del bono (~25%) + los 6 módulos (~75%).
+ * Al vencer, oferta.ts quita .sin-destacado y el bono ya no está en el
+ * DOM (data-oferta-estado lo oculta) — el grid pasa a una sola columna,
+ * o sea el bloque de módulos ocupa el 100%, sin hueco donde estaba el bono.
+ */
+@media (min-width: 1024px) {
+  [data-modulos-grid] {
+    display: grid;
+    grid-template-columns: 1fr 3fr;
+    align-items: stretch;
+  }
+  [data-modulos-grid].sin-destacado {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Resplandor de producto ────────────────────────────────────────────
+ * Los mockups de caja son fotos sobre fondo blanco/plano, montadas sobre
+ * el fondo oscuro del sitio — sin resplandor se ven como un recorte
+ * pegado. Un degradé que nace del centro de la imagen y se apaga hacia
+ * afuera. SIN la palabra clave "circle": forzar un círculo geométrico en
+ * una caja rectangular (las fotos de producto son más anchas que altas)
+ * hace que el radio, calculado para llegar a la esquina más lejana, se
+ * pase de la altura real de la caja — el degradé se corta arriba y abajo
+ * contra el borde del propio ::before en vez de apagarse solo. La forma
+ * por defecto (elipse, sin palabra clave) sí se ajusta al aspecto de la
+ * caja: sus dos radios se calculan por separado para llegar exactos a
+ * cada esquina, así que en el borde superior/inferior el degradé llega a
+ * transparente justo en el borde del contenedor, nunca antes ni después.
+ * Naranja de marca por defecto; --blanca para la única caja que ya es
+ * naranja por dentro (ai-front) y además va un 30% más grande — pedido
+ * explícito, es la única que lo necesita. Un ::before en el contenedor
+ * (los <img> no admiten pseudo-elementos); position:relative en el hijo
+ * real para que pinte encima del ::before pese a venir antes en el orden
+ * de pintado (los dos son position:relative, pero el ::before es el
+ * primer hijo generado, así que el hijo real, al venir después en el
+ * árbol, gana el empate de apilamiento).
+ */
+.imagen-resplandor {
+  position: relative;
+}
+.imagen-resplandor::before {
+  content: '';
+  position: absolute;
+  inset: 9%;
+  background: radial-gradient(
+    color-mix(in srgb, var(--color-primario) 45%, transparent) 0%,
+    color-mix(in srgb, var(--color-primario) 12%, transparent) 45%,
+    transparent 75%
+  );
+  pointer-events: none;
+}
+.imagen-resplandor--blanca::before {
+  inset: -3.3%;
+  background: radial-gradient(rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.12) 45%, transparent 75%);
+}
+.imagen-resplandor > * {
+  position: relative;
+}
+
+/* ── "+" entre las imágenes de producto y bonos ────────────────────────
+ * La "ecuación" visual (mockup + bono + bono + bono) en #modulos y en el
+ * cierre. Mismo naranja que el resto de acentos de marca.
+ */
+.mas-modulos {
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  line-height: 1;
+  color: var(--color-primario);
+  flex-shrink: 0;
+}
+
+/* ── Reproductor de video (testimonios) ────────────────────────────────
+ * Nativo, sin YouTube. Botón grande centrado (solo visible en pausa, para
+ * no tapar la cara de la persona mientras reproduce) + barra de progreso
+ * puramente visual (pointer-events: none, no se puede arrastrar).
+ */
+@keyframes pulso-reproductor {
+  0% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.3);
+  }
+}
+/* Más redondeado que el radio grande del sistema + borde naranja fino —
+   pedido explícito, solo para el marco del video de testimonio. */
+.reproductor {
+  border-radius: 20px;
+  border: 1.5px solid color-mix(in srgb, var(--color-primario) 65%, transparent);
+}
+.reproductor__video {
+  cursor: pointer;
+}
+.reproductor__boton {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  height: 56px;
+  width: 56px;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, -50%);
+  border: none;
+  border-radius: 9999px;
+  background: var(--color-primario);
+  color: #ffffff;
+  cursor: pointer;
+  transition:
+    opacity var(--mov-normal) var(--mov-curva),
+    visibility var(--mov-normal) var(--mov-curva);
+}
+/* Mientras reproduce, el botón se esconde para no tapar el video. */
+.reproductor--reproduciendo .reproductor__boton {
+  opacity: 0;
+  visibility: hidden;
+}
+.reproductor__boton::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: inherit;
+  border: 2px solid var(--color-primario);
+  animation: pulso-reproductor 1.8s ease-out infinite;
+}
+/* El triángulo de play no está centrado ópticamente por defecto. */
+.reproductor__boton svg[data-icono-play] {
+  transform: translateX(2px);
+}
+.reproductor__barra {
+  height: 6px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.25);
+  pointer-events: none;
+}
+.reproductor__barra-relleno {
+  height: 100%;
+  width: 0%;
+  background: var(--color-primario);
+  transition: width 120ms linear;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reproductor__boton::after {
+    animation: none;
+  }
+}
+/* Etiqueta del nombre: fondo naranja, texto centrado — en vez del cintillo
+   negro genérico que llevaba antes. */
+.reproductor__nombre {
+  background: color-mix(in srgb, var(--color-primario) 92%, transparent);
+  text-align: center;
+}
+
+/* ── Carrusel de videos (móvil) ───────────────────────────────────────
+ * Scroll-snap horizontal sin barra de scroll visible. En md: el propio
+ * componente cambia a display:grid y esto deja de aplicar.
+ * overflow-y: hidden es a propósito, no cosmético: al fijar solo
+ * overflow-x, la spec de CSS promueve overflow-y de "visible" a "auto"
+ * automáticamente (los dos ejes no pueden quedar en estados distintos de
+ * "visible"/no-visible) — eso convertía a este contenedor en un segundo
+ * scroll vertical anidado dentro de la página, y en iOS Safari eso es lo
+ * que hacía que el swipe vertical sobre el carrusel se sintiera raro y a
+ * veces "atrapado". touch-action: pan-x le dice al navegador que este
+ * elemento solo reclama el gesto horizontal — el vertical se lo pasa
+ * derecho al scroll normal del sitio.
+ */
+.carrusel-videos {
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  overflow-y: hidden;
+  touch-action: pan-x;
+}
+.carrusel-videos::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Parpadeo del indicador de compra ─────────────────────────────────
+ * Implementación propia en vez de encadenar utilidades de
+ * tailwind-animations (animate-blink + animate-iteration-count-infinite):
+ * componer varias clases de animación depende del orden en que Tailwind
+ * las emite en la hoja compilada, y es frágil. Esto es explícito y no
+ * depende de ese orden.
+ */
+@keyframes parpadeo {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.parpadeo {
+  animation: parpadeo 1.4s ease-in-out infinite;
+}
+
+/* ── Punto de la píldora "Ya entraron N" ───────────────────────────────
+ * Círculo chico con un pulso de anillo hacia afuera — mismo patrón que
+ * .reproductor__boton::after, aplicado acá para dar sensación de "en
+ * vivo" en la píldora de prueba social del hero.
+ */
+@keyframes pulso-punto-vivo {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primario) 55%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+.punto-vivo {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--color-primario);
+  animation: pulso-punto-vivo 1.8s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .punto-vivo {
+    animation: none;
+  }
+}
+
+/* ── Revelado al hacer scroll ────────────────────────────────────────
+ *
+ * El elemento arranca desplazado y transparente; lib/revelar.ts le pone
+ * .visible cuando entra en pantalla.
+ *
+ * Importante: si el JS no llega a ejecutarse (error, bloqueador), el
+ * contenido quedaría invisible para siempre. Por eso .sin-js lo fuerza
+ * visible, y main.ts quita esa clase solo cuando ya está observando.
+ */
+[data-revelar] {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity var(--mov-lento) var(--mov-curva-entrada),
+    transform var(--mov-lento) var(--mov-curva-entrada);
+  will-change: opacity, transform;
+}
+[data-revelar='izquierda'] {
+  transform: translateX(-24px);
+}
+[data-revelar='derecha'] {
+  transform: translateX(24px);
+}
+[data-revelar='escala'] {
+  transform: scale(0.96);
+}
+[data-revelar].visible {
+  opacity: 1;
+  transform: none;
+  will-change: auto;
+}
+
+/* Sin JavaScript, todo visible. El contenido nunca depende de una animación. */
+.no-js [data-revelar] {
+  opacity: 1;
+  transform: none;
+}
+
+/* ── Contenedores ────────────────────────────────────────────────────*/
+.contenedor {
+  width: 100%;
+  max-width: var(--contenedor-max);
+  margin-inline: auto;
+  padding-inline: var(--spacing-md);
+}
+@media (min-width: 768px) {
+  .contenedor {
+    padding-inline: var(--spacing-lg);
+  }
+}
+
+.seccion {
+  padding-block: var(--seccion-y);
+}
+
+
+/* ── Espacio testimonios → preguntas ──────────────────────────────────
+ * Pedido explícito: que quede ~30% del espacio que había entre estas dos
+ * secciones. En vez de tocar el --seccion-y global (usado por TODAS las
+ * secciones), se recorta puntualmente este borde: testimonios pierde su
+ * padding inferior y preguntas pasa a un padding superior fijo que ya es
+ * ~30% del hueco original (128/192/256px en móvil/tablet/escritorio).
+ */
+[data-block='testimonials'] {
+  padding-bottom: 0;
+}
+[data-block='faq'] {
+  padding-top: 40px;
+}
+@media (min-width: 768px) {
+  [data-block='faq'] {
+    padding-top: 58px;
+  }
+}
+@media (min-width: 1024px) {
+  [data-block='faq'] {
+    padding-top: 77px;
+  }
+}
+
+/* Longitud de línea legible para texto largo. Por encima de ~70 caracteres
+   el ojo pierde el renglón al volver. */
+.prosa {
+  max-width: var(--contenedor-texto-max);
+}
+
+/* ── Botones ─────────────────────────────────────────────────────────
+ *
+ * Un solo primario visible por vista. Si hay dos, uno está mal
+ * clasificado. Altura mínima 44px en cualquier pantalla: es el objetivo
+ * táctil por debajo del cual la gente falla el toque.
+ */
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2xs);
+  min-height: var(--boton-alto);
+  padding-inline: var(--boton-padding-x);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    background-color var(--mov-rapido) var(--mov-curva),
+    border-color var(--mov-rapido) var(--mov-curva),
+    transform var(--mov-rapido) var(--mov-curva);
+}
+.boton:active {
+  transform: translateY(1px);
+}
+.boton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.boton-primario {
+  /* Naranja vivo de marca, no --accion (pensado para texto sobre fondo
+     claro, más oscuro) — pedido explícito (2026-08-09): este botón debía
+     verse con el mismo naranja que el resto de la página (banner, ojo,
+     glow), no uno apagado. --accion-hover ya coincidía con
+     --color-primario-hover, así que el hover no necesitó cambio. */
+  background: var(--color-primario);
+  color: var(--texto-sobre-accion);
+  border: var(--borde-ancho) solid transparent;
+  /* Más redondo que el resto del sistema (radius-md) — pedido explícito
+     de marca solo para el botón de compra, no cambia el resto de esquinas. */
+  border-radius: 10px;
+  /* Glow con el naranja VIVO de marca (no el de fondo del botón, que es
+     más oscuro por contraste): mismo resplandor que el contador. Más
+     intenso que la primera versión — pedido explícito. */
+  box-shadow: 0 0 34px 0 var(--color-primario);
+}
+.boton-primario:hover:not(:disabled) {
+  background: var(--accion-hover);
+  box-shadow: 0 0 46px 4px var(--color-primario);
+}
+
+/* Naranja intenso, sin glow: títulos, enlaces, cualquier texto de marca. */
+.titulo-marca {
+  color: var(--enlace);
+}
+
+.boton-secundario {
+  background: transparent;
+  color: var(--texto-principal);
+  border: var(--borde-ancho) solid var(--linea);
+}
+.boton-secundario:hover:not(:disabled) {
+  background: var(--tarjeta-fondo);
+}
+
+/* ── Tarjetas ────────────────────────────────────────────────────────
+ * Prohibida la tarjeta dentro de tarjeta: un solo nivel de elevación
+ * por región, o el ojo deja de saber qué es lo importante.
+ * Vidrio — pedido explícito del cliente, intensificado 2026-08-09 (más
+ * transparencia y más blur; se veía poco "glass" a secas). Solo tiene
+ * sentido porque detrás ya no hay un color plano: el fondo del body, el
+ * hero (video+degradé) o .fondo-degradado siempre traen algo de qué
+ * desprenderse.
+ *
+ * #precio quedó afuera de este selector (2026-08-09, pedido explícito:
+ * "invisible"): aunque su fondo/borde ya son transparent (ver más
+ * arriba), el backdrop-filter seguía siendo una presencia visual propia
+ * — un halo desenfocado del video del hero recortado a su caja — y ese
+ * elemento no debe tener ninguna, ni siquiera esa.
+ */
+.tarjeta {
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+}
+.tarjeta {
+  background: color-mix(in srgb, var(--tarjeta-fondo) 40%, transparent);
+  border: var(--borde-ancho) solid color-mix(in srgb, white 14%, var(--linea));
+  /* --radius-md y no --lg: el escalón grande pasó a 12px para el reproductor
+     y el botón de compra; las tarjetas conservan las esquinas casi rectas
+     que son de la marca (la diferencia con los 4px de antes no se ve). */
+  border-radius: var(--radius-md);
+  padding: var(--tarjeta-padding);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+@media (min-width: 768px) {
+  .tarjeta {
+    padding: var(--tarjeta-padding-lg);
+  }
+}
+
+/* Solo las tarjetas que son clicables se elevan al pasar el ratón: si una
+   tarjeta se mueve y no lleva a ningún sitio, es una promesa falsa. */
+.tarjeta-enlace {
+  transition:
+    border-color var(--mov-normal) var(--mov-curva),
+    transform var(--mov-normal) var(--mov-curva);
+}
+.tarjeta-enlace:hover {
+  border-color: var(--accion);
+  transform: translateY(-2px);
+}
+
+/* ── Formulario ──────────────────────────────────────────────────────*/
+.campo {
+  width: 100%;
+  min-height: var(--campo-alto);
+  padding: var(--spacing-2xs) var(--spacing-xs);
+  background: var(--elevado-fondo);
+  border: var(--borde-ancho) solid var(--linea);
+  border-radius: var(--radius-sm);
+  color: var(--texto-principal);
+  font: inherit;
+  transition: border-color var(--mov-rapido) var(--mov-curva);
+}
+.campo:hover {
+  border-color: color-mix(in srgb, var(--linea) 60%, var(--texto-secundario));
+}
+.campo[aria-invalid='true'] {
+  border-color: var(--estado-error);
+}
+
+.etiqueta-campo {
+  display: block;
+  margin-bottom: var(--spacing-3xs);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* El error va DEBAJO del campo y dice cómo arreglarlo, no solo que está mal. */
+.error-campo {
+  margin-top: var(--spacing-3xs);
+  font-size: 14px;
+  color: var(--estado-error);
+}
+
+/* ── Los cuatro estados ──────────────────────────────────────────────*/
+[data-estado] {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-md);
+  font-size: 15px;
+}
+[data-estado='cargando'] {
+  background: var(--tarjeta-fondo);
+  color: var(--texto-secundario);
+}
+[data-estado='exito'] {
+  background: color-mix(in srgb, var(--estado-exito) 12%, transparent);
+  color: var(--estado-exito);
+  font-weight: 600;
+}
+[data-estado='error'] {
+  background: color-mix(in srgb, var(--estado-error) 10%, transparent);
+  color: var(--estado-error);
+}
+
+/* Spinner del botón mientras envía */
+[aria-busy='true'] .indicador-carga {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: girar 700ms linear infinite;
+}
+.indicador-carga {
+  display: none;
+}
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Preguntas frecuentes ────────────────────────────────────────────*/
+[data-faq] details {
+  border-bottom: var(--borde-ancho) solid var(--linea);
+}
+[data-faq] summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  padding-block: var(--spacing-sm);
+  min-height: var(--boton-alto);
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+[data-faq] summary::-webkit-details-marker {
+  display: none;
+}
+[data-faq] summary::after {
+  content: '+';
+  flex-shrink: 0;
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--texto-secundario);
+  transition: transform var(--mov-normal) var(--mov-curva);
+}
+[data-faq] details[open] summary::after {
+  transform: rotate(45deg);
+}
+[data-faq] details > div {
+  padding-bottom: var(--spacing-sm);
+  color: var(--texto-secundario);
+}
+
+/* ── Tipografía fluida ───────────────────────────────────────────────
+ * clamp() en vez de saltos fijos por breakpoint: el tamaño interpola con
+ * el ancho de pantalla, así que se adapta a CUALQUIER ancho, no solo a
+ * los 3 puntos de corte del sistema. El mínimo de cada uno es ~20-30%
+ * más chico que el tamaño de escritorio (pedido explícito), el máximo es
+ * el tamaño que ya tenía en desktop — no cambia ahí.
+ */
+/* ── Botón de compra ─────────────────────────────────────────────────
+ * El único CTA de la página, así que pesa tipográficamente mucho más que
+ * un botón normal: se dimensiona con clamp() para que crezca con la
+ * pantalla sin romperse en 320px, donde "QUIERO APRENDER HOY" tiene que
+ * seguir cabiendo en una línea.
+ */
+.boton-comprar {
+  display: inline-flex;
+  width: 100%;
+  max-width: 460px;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-lg);
+  background: var(--accion);
+  color: var(--texto-sobre-accion);
+  font-family: var(--font-cuerpo);
+  font-size: clamp(1.05rem, 0.82rem + 1.15vw, 1.5rem);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.1;
+  text-align: center;
+  text-decoration: none;
+  transition:
+    background var(--mov-rapido) var(--mov-curva),
+    transform var(--mov-rapido) var(--mov-curva);
+}
+.boton-comprar:hover {
+  background: var(--accion-hover);
+}
+.boton-comprar:active {
+  transform: translateY(1px);
+}
+
+/* El titileo. NO se usa la clase .parpadeo del sitio (que baja la opacidad
+ * al 35%): un botón que se apaga y se enciende se lee como deshabilitado,
+ * que es justo lo contrario de lo que tiene que comunicar. Acá late el
+ * halo hacia afuera y el botón da un pulso de escala mínimo — llama la
+ * atención sin sugerir que no se puede pulsar. */
+@keyframes cta-latido {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primario) 55%, transparent);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 10px color-mix(in srgb, var(--color-primario) 0%, transparent);
+    transform: scale(1.022);
+  }
+}
+.boton-comprar {
+  animation: cta-latido 1.9s ease-out infinite;
+}
+
+/* ── El botón flotando (lib/cta-flotante.ts) ─────────────────────────
+ * Fuera del hero pasa a una franja fija abajo. Deja de latir: pegado al
+ * borde y siempre presente ya no necesita llamar la atención, y un
+ * elemento que late permanentemente en pantalla cansa.
+ */
+/* El CTA vive en su propia sección, no dentro del hero: la del hero lleva
+   overflow-clip por el video sticky, y ese recorte también alcanza a un
+   position:fixed descendiente. Este padding reducido lo mantiene pegado
+   visualmente al reproductor, como si siguiera dentro. */
+.seccion-cta {
+  padding-block: 0 var(--seccion-y);
+}
+.cta-anclaje {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+.boton-comprar.cta--flotante {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  /* 80% del ancho: el 20% restante es del botón de WhatsApp, que comparte
+     la franja. Los dos son fixed y hermanos en la pantalla, no se pisan
+     porque cada uno tiene reservada su fracción. */
+  width: 80%;
+
+  /* En la franja el botón pasa al naranja VIVO de marca (#ff6a00), el mismo
+     del banner de arriba, en vez del naranja oscurecido que usa en el hero.
+     Y el texto pasa a casi-negro, que no es un capricho estético: blanco
+     sobre #ff6a00 da 2.87:1 y no llega ni de lejos al 4.5 que exige el
+     contrato, mientras que el texto oscuro sobre ese mismo naranja da 6.7:1.
+     Así se consigue el naranja que más resalta SIN romper el contraste —
+     invertir el texto es lo que lo hace posible. */
+  background: var(--color-primario);
+  color: #0b0908;
+  /* Por encima de todo lo de la página. Solo WhatsApp (z-index: 999) queda
+     más arriba, porque comparte la franja y tiene que quedar a su derecha.
+     Con el z-index bajo de antes, cualquier sección con contexto de
+     apilamiento propio —las de fondo degradado, las tarjetas con vidrio— se
+     dibujaba encima y se comía el botón. */
+  z-index: 998;
+  max-width: none;
+  border-radius: 0;
+  padding: var(--spacing-sm) var(--spacing-2xs);
+  /* Aparece con un pop en vez de materializarse de golpe: el rebote corto
+     dice "esto acaba de llegar" sin robar la atención del contenido. La
+     declaración de `animation` va más abajo, junto al brillo. */
+}
+
+@keyframes cta-pop {
+  from {
+    transform: translateY(100%);
+  }
+  60% {
+    transform: translateY(-6%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/* El brillo de la franja: un resplandor naranja que late hacia afuera, más
+   marcado que el del hero. Va en box-shadow y no en filter porque filter
+   crearía contexto de apilamiento en el propio botón y ya se ha visto tres
+   veces en este archivo lo que eso le hace a un position:fixed. */
+@keyframes cta-brilla {
+  0%,
+  100% {
+    box-shadow:
+      0 -6px 24px rgb(0 0 0 / 0.45),
+      0 0 18px 2px color-mix(in srgb, var(--color-primario) 55%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 -6px 24px rgb(0 0 0 / 0.45),
+      0 0 42px 8px color-mix(in srgb, var(--color-primario) 85%, transparent);
+  }
+}
+.boton-comprar.cta--flotante {
+  animation:
+    cta-pop var(--mov-normal) cubic-bezier(0.34, 1.56, 0.64, 1) both,
+    cta-brilla 1.2s ease-in-out infinite;
+}
+
+/* Y el texto parpadea aparte, más rápido y con más recorrido que antes. Es
+   el texto y no el botón entero porque la franja es una superficie fija y
+   grande: hacerla latir de tamaño resultaba pesado, y además movería el
+   único elemento que tiene que estar siempre quieto para poder pulsarlo. */
+.cta--flotante .boton-comprar__texto {
+  animation: cta-texto-titila 0.85s ease-in-out infinite;
+}
+@keyframes cta-texto-titila {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.98);
+  }
+}
+/* Reserva al final de la página el alto de la franja, para que no tape el
+   pie cuando el visitante llega abajo del todo. */
+body.con-cta-flotante {
+  padding-bottom: var(--cta-flotante-alto, 64px);
+}
+
+/* El aviso de cookies también vive pegado abajo, así que mientras la franja
+ * está puesta se sube justo por encima de ella.
+ *
+ * No se resuelve subiendo el z-index del CTA por encima del aviso: si el CTA
+ * tapara el aviso, nadie podría aceptar ni rechazar cookies — y eso rompe el
+ * consentimiento, que es requisito legal (lopdp_co) y además la condición
+ * para que el tracking llegue a activarse. Los dos tienen que ser visibles y
+ * pulsables, así que se apilan en vez de competir.
+ */
+body.con-cta-flotante #consentimiento {
+  bottom: var(--cta-flotante-alto, 64px);
+}
+
+/* ── WhatsApp flotante ───────────────────────────────────────────────
+ * Dos formas según lo que esté pasando:
+ *
+ *   Solo      — burbuja redonda en la esquina inferior derecha, mientras el
+ *               visitante está en el hero.
+ *   En franja — cuando el CTA baja a la franja, este pasa a ser el 20%
+ *               derecho de esa misma franja: misma altura, sin redondeo, sin
+ *               separación. Así los dos ocupan el ancho completo y ninguno
+ *               tapa al otro.
+ */
+.wa-flotante {
+  position: fixed;
+  right: var(--spacing-sm);
+  bottom: var(--spacing-sm);
+  z-index: 999; /* lo único que puede quedar por encima del CTA */
+  display: flex;
+  height: 52px;
+  width: 52px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: #128c7e;
+  color: #fff;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.45);
+  transition:
+    height var(--mov-normal) var(--mov-curva),
+    width var(--mov-normal) var(--mov-curva),
+    border-radius var(--mov-normal) var(--mov-curva),
+    right var(--mov-normal) var(--mov-curva),
+    bottom var(--mov-normal) var(--mov-curva);
+}
+.wa-flotante:hover {
+  background: #0e6f64;
+}
+body.con-cta-flotante .wa-flotante {
+  right: 0;
+  bottom: 0;
+  height: var(--cta-flotante-alto, 64px);
+  width: 20%;
+  border-radius: 0;
+  box-shadow: 0 -6px 24px rgb(0 0 0 / 0.45);
+}
+@media (prefers-reduced-motion: reduce) {
+  .wa-flotante {
+    transition: none;
+  }
+}
+
+/* ── Entrada de la barra de oferta ───────────────────────────────────
+ * Baja desde arriba al desplegarse el pitch, en vez de aparecer ya puesta.
+ * Es lo primero que cambia en la pantalla cuando la oferta se abre, así que
+ * el movimiento es lo que dirige la vista hacia el contador.
+ */
+@keyframes banner-baja {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: none;
+  }
+}
+html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
+  animation: banner-baja var(--mov-lento) cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── Testimonios de la sección previa ────────────────────────────────
+ * Columnas y no grid: las citas van de un renglón a seis, y en un grid
+ * todas las filas se igualan a la más alta y quedan huecos enormes bajo las
+ * cortas. Con `columns` cada tarjeta ocupa solo su alto real.
+ * break-inside: avoid es lo que impide que una cita se parta por la mitad
+ * entre dos columnas.
+ */
+.testimonios-columnas {
+  columns: 1;
+  column-gap: var(--spacing-sm);
+}
+.testimonios-columnas > * {
+  break-inside: avoid;
+  margin-bottom: var(--spacing-sm);
+}
+@media (min-width: 768px) {
+  .testimonios-columnas {
+    columns: 2;
+  }
+}
+@media (min-width: 1024px) {
+  .testimonios-columnas {
+    columns: 3;
+  }
+}
+
+/* ── Control de volumen ──────────────────────────────────────────────
+ * El icono lo pinta lib/volumen.ts según el estado real (sin sonar, mudo, o
+ * con 1-3 ondas por nivel). Acá solo va la forma.
+ */
+.volumen {
+  position: absolute;
+  right: var(--spacing-2xs);
+  bottom: var(--spacing-2xs);
+  z-index: 4;
+  display: none;
+  align-items: center;
+  gap: var(--spacing-2xs);
+  padding: 0 var(--spacing-3xs) 0 0;
+  border-radius: 9999px;
+  background: rgb(0 0 0 / 0.55);
+  color: #fff;
+}
+/* Solo existe mientras hay algo que oír. */
+.vsl--reproduciendo .volumen {
+  display: flex;
+}
+.volumen__boton {
+  display: flex;
+  height: 36px;
+  width: 36px;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 9999px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* El deslizador está plegado hasta que se pulsa la bocina: desplegado
+   siempre, tapa parte del video sin que casi nadie lo use. */
+.volumen__rango {
+  width: 0;
+  opacity: 0;
+  margin: 0;
+  accent-color: var(--color-primario);
+  cursor: pointer;
+  transition:
+    width var(--mov-normal) var(--mov-curva),
+    opacity var(--mov-rapido) var(--mov-curva);
+}
+.volumen--abierto .volumen__rango {
+  width: 84px;
+  opacity: 1;
+}
+/* Con teclado se despliega solo al recibir el foco: si no, sería imposible
+   llegar a él tabulando. */
+.volumen__rango:focus-visible {
+  width: 84px;
+  opacity: 1;
+}
+
+/* ── Banner en video ─────────────────────────────────────────────────
+ * Pieza gráfica muy apaisada (16:2). aspect-ratio en el elemento, no solo
+ * width/height, para que reserve su hueco exacto desde el primer pintado y
+ * no empuje nada al cargar.
+ */
+.seccion-banner {
+  padding-block: var(--seccion-y) 0;
+}
+.banner-video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 8 / 1;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+}
+
+/* ── El mentor ───────────────────────────────────────────────────────
+ * Móvil y tablet: foto arriba, texto debajo. Escritorio: dos columnas, la
+ * foto a la izquierda con un ancho fijo para que no se estire.
+ */
+.mentor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  align-items: center;
+}
+@media (min-width: 1024px) {
+  .mentor {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--spacing-xl);
+  }
+}
+
+.mentor__foto {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  flex-shrink: 0;
+}
+.mentor__foto img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-lg);
+  border: var(--borde-ancho) solid var(--linea);
+}
+
+/* La píldora del nombre monta sobre el borde inferior de la foto: ata el
+   nombre a la cara en vez de dejarlo flotando como un pie de foto suelto. */
+.mentor__pildora {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translate(-50%, 50%);
+  padding: var(--spacing-3xs) var(--spacing-sm);
+  border-radius: 9999px;
+  background: var(--color-primario);
+  color: #fff;
+  font-family: var(--font-cuerpo);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--color-primario) 45%, transparent);
+}
+
+.mentor__texto {
+  width: 100%;
+  text-align: center;
+}
+@media (min-width: 1024px) {
+  .mentor__texto {
+    text-align: left;
+  }
+}
+
+.mentor__ojo {
+  margin: var(--spacing-md) 0 var(--spacing-3xs);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--texto-secundario);
+}
+@media (min-width: 1024px) {
+  .mentor__ojo {
+    margin-top: 0;
+  }
+}
+
+.mentor__nombre {
+  margin: 0 0 var(--spacing-sm);
+  font-size: clamp(1.5rem, 1.1rem + 2vw, 2.25rem);
+  line-height: 1.1;
+  color: var(--texto-principal);
+}
+
+.mentor__cifras {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-sm);
+  margin: 0;
+  padding-top: var(--spacing-sm);
+  border-top: var(--borde-ancho) solid var(--linea);
+  text-align: left;
+}
+.mentor__cifra {
+  font-family: var(--font-display);
+  font-size: clamp(1.15rem, 0.95rem + 1vw, 1.6rem);
+  line-height: 1;
+  color: var(--color-primario);
+}
+.mentor__rotulo {
+  margin: var(--spacing-3xs) 0 0;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  color: var(--texto-secundario);
+}
+
+/* ── Fondo del hero: video + resplandor ─────────────────────────────
+ * Reciclado tal cual de la landing anterior (pedido explícito: mismo CSS y
+ * mismo comportamiento). El video va en opacidad reducida —es ambientación,
+ * no protagonista, y detrás va el VSL, que sí lo es— y el resplandor naranja
+ * arriba-centro más el oscurecido progresivo hacia abajo se pintan en un
+ * ::after aparte, ENCIMA del video, para que el texto del hero mantenga
+ * contraste sin importar qué toma esté pasando.
+ *
+ * position:sticky y no absolute: el video se queda fijo en pantalla durante
+ * TODA la sección del hero, en vez de asomarse un instante y desaparecer al
+ * primer scroll. top:0 + height:100vh lo clava arriba del viewport mientras
+ * la sección sigue en pantalla; el margin-bottom negativo del mismo alto
+ * cancela el espacio que ocuparía en el flujo, así el título y el
+ * reproductor no se corren hacia abajo — quedan superpuestos encima.
+ *
+ * El margin-top negativo: sticky vive en flujo normal, así que arranca
+ * DESPUÉS del padding-block de .seccion (--seccion-y: 32/48/64px por etapa).
+ * Sin restarlo queda una franja plana del fondo de la página, sin degradé ni
+ * video, justo arriba del título.
+ */
+.hero-fondo {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  margin-top: calc(-1 * var(--seccion-y));
+  margin-bottom: -100vh;
+  z-index: 0;
+  background: var(--pagina-fondo);
+}
+.hero-fondo video {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  opacity: 0.25;
+}
+.hero-fondo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 15%, color-mix(in srgb, var(--color-primario) 22%, transparent), transparent 55%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--pagina-fondo) 72%, transparent) 0%,
+      color-mix(in srgb, var(--pagina-fondo) 95%, transparent) 100%
+    );
+}
+
+/* ── Reproductor del VSL ─────────────────────────────────────────────
+ * Adaptado de plantillas/t1-landing (ver references/reproductor-video.md),
+ * con los tokens de esta marca. Diferencia clave con el patrón de la
+ * plantilla: acá NO hay botón de play/pausa ni barra de progreso — una vez
+ * arranca, el video corre hasta el final. Lo único que se ve encima es la
+ * portada (antes de arrancar) y el botón de silencio.
+ *
+ * El aspect-ratio va en el contenedor y no solo en el <video>: reserva el
+ * hueco exacto desde el primer pintado, antes de que el navegador sepa nada
+ * del archivo. Sin esto la portada se colapsaría a cero de alto y al cargar
+ * el video empujaría la página entera (CLS).
+ */
+.vsl {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  border: var(--borde-ancho) solid var(--linea);
+  border-radius: var(--radius-lg);
+  background: #000;
+}
+.vsl__video {
+  display: block;
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+}
+
+/* ── Portada de la previa ────────────────────────────────────────────
+ * Detrás corre el video mudo en bucle; esta capa lo desenfoca. El
+ * backdrop-filter es lo que hace el trabajo: se percibe movimiento y color
+ * reales detrás del vidrio, pero no se distingue el contenido — que es lo
+ * que sostiene el "te lo estás perdiendo". Un velo opaco liso no lo
+ * consigue, y un poster estático tampoco.
+ *
+ * El velo oscuro encima del desenfoque no es redundante: el desenfoque
+ * mantiene la luminosidad media del fotograma, así que sobre una toma clara
+ * el texto blanco se perdería igual.
+ */
+/* El desenfoque vive en una sola clase, compartida por la previa y la
+   pantalla final: es exactamente el mismo efecto en los dos sitios, así que
+   duplicarlo era duplicar el valor a mantener. */
+.vsl__vidrio {
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+}
+
+.vsl__portada {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  text-align: center;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, #000 42%, transparent) 0%,
+    color-mix(in srgb, #000 68%, transparent) 100%
+  );
+}
+.vsl__portada[hidden] {
+  display: none; /* [hidden] pierde por especificidad contra el display:flex */
+}
+
+.vsl__aviso {
+  margin: 0;
+  max-width: 24ch;
+  font-family: var(--font-display);
+  font-size: clamp(0.95rem, 0.72rem + 1.15vw, 1.5rem);
+  line-height: 1.25;
+  color: #fff;
+  text-shadow: 0 2px 8px rgb(0 0 0 / 0.7);
+}
+
+.vsl__arrancar {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2xs);
+  min-height: var(--boton-alto);
+  padding: var(--spacing-2xs) var(--spacing-md);
+  border: none;
+  border-radius: 9999px;
+  background: var(--accion);
+  color: var(--texto-sobre-accion);
+  font-family: var(--font-cuerpo);
+  font-size: clamp(0.9rem, 0.8rem + 0.5vw, 1.05rem);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* El titileo: es lo único que se mueve en la pantalla de entrada, así que
+   es lo que dice dónde hay que pulsar. Un halo que late hacia afuera, no un
+   parpadeo de opacidad del propio botón — un botón que se apaga y se
+   enciende se lee como "deshabilitado", no como "púlsame". */
+@keyframes vsl-latido {
+  0% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.45);
+  }
+}
+.vsl__arrancar::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: inherit;
+  border: 2px solid var(--color-primario);
+  animation: vsl-latido 1.8s ease-out infinite;
+  pointer-events: none;
+}
+.vsl__arrancar {
+  position: relative;
+}
+
+.vsl__pie {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(0.72rem, 0.66rem + 0.3vw, 0.85rem);
+  text-shadow: 0 1px 3px rgb(0 0 0 / 0.6);
+}
+
+/* ── Diálogo de retomar ──────────────────────────────────────────────
+ * Va encima de la portada: el visitante decide antes de que suene nada.
+ */
+.vsl__retomar {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  text-align: center;
+  background: color-mix(in srgb, var(--pagina-fondo) 88%, transparent);
+}
+.vsl__retomar[hidden] {
+  display: none;
+}
+.vsl__retomar-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--spacing-2xs);
+}
+
+/* ── Pantalla final ──────────────────────────────────────────────────
+ * La miniatura de fondo con la misma capa de desenfoque de la previa, y
+ * encima las dos salidas: comprar, o preguntar antes de comprar.
+ */
+.vsl__final {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+}
+.vsl__final[hidden] {
+  display: none;
+}
+.vsl__final-fondo {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+}
+.vsl__final-contenido {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2xs);
+  padding: var(--spacing-sm);
+  text-align: center;
+  background: color-mix(in srgb, #000 55%, transparent);
+}
+
+/* Dentro del reproductor el espacio es el que es: el botón de compra baja
+   un escalón de tamaño para que los dos quepan sin apretarse, incluso en
+   360px de ancho. */
+.boton-comprar--compacto {
+  max-width: 420px;
+  padding: var(--spacing-2xs) var(--spacing-sm);
+  font-size: clamp(0.85rem, 0.7rem + 0.75vw, 1.1rem);
+  animation: none;
+}
+
+/* ── Botón de WhatsApp ───────────────────────────────────────────────
+ * Verde y no naranja de marca a propósito: es una salida distinta a la de
+ * comprar, y el color lo dice antes de que nadie lea la etiqueta. El verde
+ * es el de WhatsApp, que además ya es un código conocido.
+ */
+.boton-whatsapp {
+  display: inline-flex;
+  width: 100%;
+  max-width: 420px;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2xs);
+  padding: var(--spacing-2xs) var(--spacing-sm);
+  border-radius: var(--radius-lg);
+  background: #128c7e; /* 4.6:1 con texto blanco — pasa AA */
+  color: #fff;
+  font-family: var(--font-cuerpo);
+  font-size: clamp(0.72rem, 0.62rem + 0.5vw, 0.9rem);
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: center;
+  text-decoration: none;
+  transition: background var(--mov-rapido) var(--mov-curva);
+}
+.boton-whatsapp:hover {
+  background: #0e6f64;
+}
+
+
+/* ── Las dos redacciones del titular ─────────────────────────────────
+ * Se alternan por CSS y no por JS: con JS habría un instante con el titular
+ * equivocado en pantalla, y encima es el elemento del LCP.
+ */
+.solo-movil {
+  display: block;
+}
+.desde-tablet {
+  display: none;
+}
+@media (min-width: 768px) {
+  .solo-movil {
+    display: none;
+  }
+  .desde-tablet {
+    display: block;
+  }
+}
+
+.hero-parrafo {
+  /* Reducido bastante — pedido explícito, 2026-08-09. */
+  font-size: clamp(0.7rem, 0.62rem + 0.4vw, 0.8rem); /* 11.2px → 12.8px */
+  max-width: 52ch;
+}
+/* En escritorio el párrafo pasa a ser MÁS ancho que el titular: sus
+ * márgenes laterales quedan en un 20% de los que tiene el título (pedido
+ * explícito). El título llena .contenedor, así que su margen es el padding
+ * lateral de este (--spacing-lg desde 768px); el párrafo se sale el 80% de
+ * ese padding a cada lado con margin negativo y le queda el 20%.
+ * calc() sobre el token real y no un número suelto: si el contenedor cambia
+ * de padding, esto lo sigue solo. */
+@media (min-width: 1024px) {
+  .hero-parrafo {
+    max-width: none;
+    width: calc(100% + 1.6 * var(--spacing-lg));
+    margin-inline: calc(-0.8 * var(--spacing-lg));
+  }
+}
+.cta-titulo {
+  font-size: clamp(1.225rem, 0.9rem + 2.6vw, 2.25rem); /* 19.6px → 36px */
+  line-height: 1.15;
+}
+.cta-parrafo {
+  font-size: clamp(0.79rem, 0.65rem + 1vw, 1.125rem); /* 12.6px → 18px */
+}
+
+/* ── Pie legal ───────────────────────────────────────────────────────
+ * Las 4 etiquetas deben caber en una sola fila siempre. Con la frase
+ * completa ("Términos y condiciones"...) no cabe en ningún tamaño de
+ * letra legible en un móvil angosto — por eso hay una etiqueta corta
+ * (visible por defecto) y una larga (visible desde md, donde ya hay
+ * espacio de sobra). El nombre accesible completo va en aria-label del
+ * <a>, así que un lector de pantalla siempre anuncia la frase completa.
+ */
+.pie-legal {
+  font-size: clamp(0.68rem, 0.6rem + 0.6vw, 0.75rem);
+}
+.pie-legal-largo {
+  display: none;
+}
+@media (min-width: 768px) {
+  .pie-legal-corto {
+    display: none;
+  }
+  .pie-legal-largo {
+    display: inline;
+  }
+}
+
+/* ── Hero ────────────────────────────────────────────────────────────
+ * En móvil NO se sirve el vídeo: se sirve el póster. Es de donde sale la
+ * mayor parte de la puntuación de rendimiento en móvil, que es donde
+ * está el tráfico.
+ */
+.hero-media {
+  display: none;
+}
+@media (min-width: 768px) {
+  .hero-media {
+    display: block;
+  }
+}
+
+/* ── Sólo para lectores de pantalla ──────────────────────────────────*/
+.solo-lectores {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Saltar al contenido: primer tabulador de la página. Obligatorio para
+   quien navega por teclado y no quiere recorrer el menú cada vez. */
+.saltar-contenido {
+  position: absolute;
+  left: var(--spacing-sm);
+  top: -100px;
+  z-index: 100;
+  padding: var(--spacing-2xs) var(--spacing-sm);
+  background: var(--accion);
+  color: var(--texto-sobre-accion);
+  border-radius: var(--radius-sm);
+  transition: top var(--mov-rapido) var(--mov-curva);
+}
+.saltar-contenido:focus {
+  top: var(--spacing-sm);
+}
+
+/* ── Publicidad ──────────────────────────────────────────────────────
+ * El contenedor reserva la altura ANTES de que cargue el anuncio. Sin
+ * esto el anuncio empuja el contenido al aparecer y el CLS se dispara.
+ */
+.anuncio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-block: var(--spacing-lg);
+  overflow: hidden;
+}
+.anuncio::before {
+  content: 'Publicidad';
+  position: absolute;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texto-secundario);
+  opacity: 0.5;
+}
+.anuncio > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Movimiento reducido ─────────────────────────────────────────────
+ * revelar.ts ya respeta prefers-reduced-motion para el scroll-reveal.
+ * Esto cubre lo otro: el scroll suave, el parpadeo del indicador de
+ * compra, y cualquier utilidad animate-* de tailwind-animations que se
+ * use más adelante — se apagan aquí, de un solo sitio.
+ */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .parpadeo,
+  [class*='animate-'] {
+    animation: none !important;
+  }
+  /* Los dos latidos en bucle —el halo del botón de arranque y el pulso del
+     botón de compra— son exactamente el tipo de movimiento que esta
+     preferencia pide apagar. Los dos botones se siguen viendo igual, solo
+     dejan de latir. */
+  .vsl__arrancar::after,
+  .boton-comprar,
+  .boton-comprar.cta--flotante,
+  .cta--flotante .boton-comprar__texto,
+  .boton-comprar.cta--flotante,
+  html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
+    animation: none;
+  }
+  .volumen__rango {
+    transition: none;
+  }
+}

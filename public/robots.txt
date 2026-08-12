@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# El endpoint de analítica y el panel privado no son contenido: no hay nada
+# que indexar ahí, y el panel además pide credenciales.
+Disallow: /api/
+Disallow: /panel-retencion/
+
+Sitemap: https://EJEMPLO.com/sitemap.xml
