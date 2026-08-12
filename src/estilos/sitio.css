@@ -1130,9 +1130,6 @@ html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
  * width/height, para que reserve su hueco exacto desde el primer pintado y
  * no empuje nada al cargar.
  */
-.seccion-banner {
-  padding-block: var(--seccion-y) 0;
-}
 .banner-video {
   display: block;
   width: 100%;
