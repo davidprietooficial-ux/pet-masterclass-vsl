@@ -1,5 +1,5 @@
 /**
- * Reproductor VSL sin controles.
+ * Reproductor VSL.
  *
  * Tres estados, en este orden:
  *
@@ -9,7 +9,8 @@
  *      sostiene la idea de que la clase ya empezó; un poster estático no lo
  *      consigue.
  *   2. VIENDO — al pulsar, se quita el desenfoque, se activa el audio y el
- *      video empieza DESDE CERO. Sin controles: no se pausa ni se adelanta.
+ *      video empieza DESDE CERO. Se puede pausar y retomar; lo que no se
+ *      puede es ADELANTAR.
  *   3. FINAL — al terminar, la miniatura con desenfoque encima y los dos
  *      botones (comprar y soporte por WhatsApp).
  *
@@ -200,14 +201,34 @@ function iniciarUnReproductor(contenedor: HTMLElement): void {
     }
   });
 
-  // Sin pausa: si algo la provoca (atajo de teclado, auriculares
-  // desconectados, menú contextual) se retoma sola. La única pausa que se
-  // respeta es la del final del video.
-  video.addEventListener('pause', () => {
-    if (video.ended) return;
-    if (!arrancado) return;
-    video.play().catch(() => {});
-  });
+  // ── Play / pausa ────────────────────────────────────────────────────
+  // Se puede pausar y retomar (pedido explícito). Lo que sigue bloqueado es
+  // ADELANTAR: pausar no permite saltarse el pitch, así que no compite con
+  // el objetivo de la página, y en cambio resuelve el caso real de que a
+  // alguien lo interrumpan a mitad de clase.
+
+  const botonPlay = contenedor.querySelector<HTMLButtonElement>('[data-vsl-play]');
+
+  function pintarPlay(): void {
+    const enPausa = video!.paused;
+    contenedor.classList.toggle('vsl--pausado', enPausa && arrancado);
+    if (!botonPlay) return;
+    botonPlay.setAttribute('aria-label', enPausa ? 'Reanudar' : 'Pausar');
+    contenedor.querySelectorAll<HTMLElement>('[data-vsl-play-icono]').forEach((icono) => {
+      icono.style.display = icono.dataset.vslPlayIcono === (enPausa ? 'play' : 'pausa') ? '' : 'none';
+    });
+  }
+
+  if (botonPlay) {
+    botonPlay.addEventListener('click', (evento) => {
+      evento.stopPropagation();
+      if (video.paused) video.play().catch(() => {});
+      else video.pause();
+    });
+  }
+
+  video.addEventListener('play', pintarPlay);
+  video.addEventListener('pause', pintarPlay);
 
   video.addEventListener('ended', () => {
     if (!arrancado) return; // en previa hay loop, no debería llegar acá

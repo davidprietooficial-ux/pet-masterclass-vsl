@@ -1029,6 +1029,45 @@ html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
   }
 }
 
+/* ── Play / pausa ────────────────────────────────────────────────────
+ * Solo existe con el video ya arrancado: en la previa el único botón que
+ * debe haber es el de empezar. Se puede pausar y retomar; adelantar sigue
+ * bloqueado, que es lo que de verdad protege el pitch.
+ */
+.vsl__play {
+  position: absolute;
+  left: var(--spacing-2xs);
+  bottom: var(--spacing-2xs);
+  z-index: 4;
+  display: none;
+  height: 36px;
+  width: 36px;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 9999px;
+  background: rgb(0 0 0 / 0.55);
+  color: #fff;
+  cursor: pointer;
+}
+.vsl--reproduciendo .vsl__play {
+  display: flex;
+}
+
+/* En pausa el botón crece y se pone en el naranja de marca, centrado sobre
+   el video: pausado, la pantalla se queda quieta y hay que decir claramente
+   dónde se retoma. */
+.vsl--pausado .vsl__play {
+  left: 50%;
+  bottom: 50%;
+  height: 64px;
+  width: 64px;
+  transform: translate(-50%, 50%);
+  background: var(--color-primario);
+  color: #0b0908;
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.5);
+}
+
 /* ── Control de volumen ──────────────────────────────────────────────
  * El icono lo pinta lib/volumen.ts según el estado real (sin sonar, mudo, o
  * con 1-3 ondas por nivel). Acá solo va la forma.
@@ -1214,7 +1253,11 @@ html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
     order: 0;
     grid-column: 1;
     grid-row: 1 / span 2;
-    gap: var(--spacing-lg) var(--spacing-xl);
+    /* Las cuatro cifras se leen como UN bloque, no como cuatro elementos
+       sueltos: con los huecos grandes de antes quedaban dispersas y perdían
+       fuerza. El hueco entre columnas sigue siendo mayor que el de filas
+       para que se distingan las dos parejas. */
+    gap: var(--spacing-md) var(--spacing-lg);
     /* Columnas al ancho del contenido (`auto`) y el bloque pegado a la
        derecha de su celda. Con columnas de 1fr, la segunda —"+15", "+50",
        que son cortas— dejaba un hueco muerto entre el texto y la foto: el
