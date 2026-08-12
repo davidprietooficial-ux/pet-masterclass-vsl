@@ -43,6 +43,12 @@
       crossorigin
     />
 
+    <!-- El poster del reproductor es el elemento más grande de la primera
+         pantalla, y con `preload="none"` en el <video> el navegador no lo
+         pedía hasta muy tarde: el LCP se iba justo al límite de los 2.5s.
+         Precargarlo lo adelanta sin traerse el video entero. -->
+    <link rel="preload" href="/vsl/masterclass-poster.webp" as="image" fetchpriority="high" />
+
     <meta name="theme-color" content="#171310" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 
