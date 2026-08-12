@@ -1308,19 +1308,33 @@ html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
  * Sin restarlo queda una franja plana del fondo de la página, sin degradé ni
  * video, justo arriba del título.
  */
+/* La sección entera sube por encima del hueco que el body reserva para el
+ * banner de oferta, y recupera ese mismo alto como padding: el contenido no
+ * se mueve ni un píxel, pero el fondo ya empieza en el borde de la pantalla.
+ *
+ * Se sube la SECCIÓN y no el video, que fue el primer intento y no funcionó:
+ * la sección lleva `overflow-clip` (para que el video sticky no se pinte
+ * fuera de ella más abajo), y ese recorte también aplica hacia arriba — el
+ * video se salía por encima y quedaba cortado exactamente donde se veía la
+ * franja negra. Moviendo la sección, el video nunca se sale de ella.
+ */
+[data-block='hero-vsl'] {
+  margin-top: calc(-1 * var(--banner-alto, 44px));
+  padding-top: calc(var(--seccion-y) + var(--banner-alto, 44px));
+}
+@media (min-width: 768px) {
+  [data-block='hero-vsl'] {
+    margin-top: calc(-1 * var(--banner-alto, 56px));
+    padding-top: calc(var(--seccion-y) + var(--banner-alto, 56px));
+  }
+}
+
 .hero-fondo {
   position: sticky;
-  /* Sube por encima del hueco reservado para el banner de oferta, en vez de
-     empezar por debajo. Sin esto quedaba una franja negra del fondo del body
-     entre el borde de la pantalla y el video — el "banda negra arriba".
-     El margin-top negativo suma las dos cosas que hay que remontar: el
-     padding-block de .seccion y ese hueco del banner. Y el alto crece lo
-     mismo, para que el video siga llegando abajo hasta donde llegaba.
-     Cuando el banner aparece, se pinta encima (es fixed, z-50) sobre el
-     mismo video: el fondo no se mueve y los títulos tampoco, porque el hueco
-     ya estaba reservado desde el principio. */
-  top: calc(-1 * var(--banner-alto, 44px));
-  height: calc(100vh + var(--banner-alto, 44px));
+  top: 0;
+  height: 100vh;
+  /* Remonta el padding-top completo de la sección (el suyo propio más el
+     hueco del banner) para arrancar en su borde real. */
   margin-top: calc(-1 * (var(--seccion-y) + var(--banner-alto, 44px)));
   margin-bottom: -100vh;
   z-index: 0;
@@ -1328,8 +1342,6 @@ html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
 }
 @media (min-width: 768px) {
   .hero-fondo {
-    top: calc(-1 * var(--banner-alto, 56px));
-    height: calc(100vh + var(--banner-alto, 56px));
     margin-top: calc(-1 * (var(--seccion-y) + var(--banner-alto, 56px)));
   }
 }

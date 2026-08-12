@@ -85,10 +85,25 @@ function iniciarUnReproductor(contenedor: HTMLElement): void {
   function arrancarPrevia(): void {
     video!.muted = true;
     video!.loop = true; // que no llegue nunca al final estando en previa
-    video!.play().catch(() => {
-      // Autoplay bloqueado incluso mudo (raro, pero pasa en modos de ahorro
-      // de datos): se queda el poster y el botón, que es lo que importa.
-    });
+
+    const reproducir = (): void => {
+      video!.play().catch(() => {
+        // Autoplay bloqueado incluso mudo (raro, pero pasa en modos de ahorro
+        // de datos): se queda el poster y el botón, que es lo que importa.
+      });
+    };
+
+    // La previa espera a que la página termine de cargar. Llamar a play()
+    // durante el arranque hace que el navegador se ponga a descargar el
+    // video —varios MB— compitiendo por el ancho de banda con el poster,
+    // que es el elemento del LCP: medido, eso se llevaba el LCP por encima
+    // del umbral de 2.5s del contrato. Retrasarlo no se nota (la previa es
+    // ambientación) y devuelve el arranque a donde tiene que estar.
+    if (document.readyState === 'complete') {
+      reproducir();
+      return;
+    }
+    window.addEventListener('load', reproducir, { once: true });
   }
 
   // ── 2. Reproducción real ────────────────────────────────────────────
