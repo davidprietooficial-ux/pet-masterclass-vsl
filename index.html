@@ -1,0 +1,1661 @@
+<!doctype html>
+<!--
+  Dos clases en el <html>, las dos con el mismo propósito de fail-open:
+
+  no-js          — la quita el script inline de más abajo. Si el JS está
+                   bloqueado, se queda puesta.
+  pitch-bloqueado — oculta todo lo que hay debajo del video hasta que el
+                   visitante llega al minuto del pitch.
+
+  El CSS solo oculta el contenido cuando se dan LAS DOS (ver
+  `html.pitch-bloqueado:not(.no-js)` en sitio.css): sin JS, `no-js` nunca se
+  va y la página se lee entera. El rastreador de Google ve lo mismo.
+-->
+<html lang="es" class="no-js pitch-bloqueado">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Masterclass gratis de edición de video · Plan de Edición Total</title>
+    <meta
+      name="description"
+      content="Clase gratuita completa: cómo editar video con criterio profesional en Premiere Pro y CapCut. Se ve aquí mismo, sin registro y sin esperar a una fecha."
+    />
+    <link rel="canonical" href="https://planediciontotal.com/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Masterclass gratis de edición de video" />
+    <meta
+      property="og:description"
+      content="La clase completa de edición profesional en Premiere Pro y CapCut, gratis y sin registro. Se ve aquí mismo."
+    />
+    <meta property="og:url" content="https://planediciontotal.com/" />
+    <meta property="og:image" content="https://planediciontotal.com/og.jpg" />
+    <meta property="og:locale" content="es_CO" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- La fuente de titulares se precarga: es la del LCP (el H1 del hero). -->
+    <link
+      rel="preload"
+      href="/fuentes/special-gothic-expanded-one.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
+    <!-- El poster del reproductor es el elemento más grande de la primera
+         pantalla, y con `preload="none"` en el <video> el navegador no lo
+         pedía hasta muy tarde: el LCP se iba justo al límite de los 2.5s.
+         Precargarlo lo adelanta sin traerse el video entero. -->
+    <link rel="preload" href="/vsl/masterclass-poster.webp" as="image" fetchpriority="high" />
+
+    <!-- Conexión con Hotmart abierta desde el primer momento.
+         `preconnect` resuelve el DNS y negocia el TLS por adelantado — unos
+         200-300ms en móvil— sin descargar ni un byte y sin enviar ningún
+         dato del visitante, así que no es "cargar un tercero": es tener el
+         túnel listo para cuando de verdad haga falta. El checkout en sí lo
+         carga lib/checkout.ts en un iframe oculto en cuanto el visitante le
+         da play, mucho antes de que llegue a pulsar comprar. -->
+    <link rel="preconnect" href="https://pay.hotmart.com" crossorigin />
+    <link rel="dns-prefetch" href="https://pay.hotmart.com" />
+
+    <meta name="theme-color" content="#171310" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+    <!--
+      Inline y en el <head> a propósito: resuelve el estado ANTES del primer
+      pintado. Si esto viviera en main.ts (que es type=module, o sea
+      diferido), el navegador ya habría pintado la página entera y se vería
+      un destello de todo el contenido antes de ocultarse — además del salto
+      de layout que eso implica.
+
+      Al blindar el sitio, la CSP tiene que permitir este script por hash
+      (`script-src 'sha256-...'`), no con 'unsafe-inline'.
+    -->
+    <script>
+      (function () {
+        var raiz = document.documentElement;
+        raiz.classList.remove('no-js');
+
+        var params = new URLSearchParams(location.search);
+
+        var vista = params.get('vista');
+
+        // ?vista=inicio — fuerza el estado de recién llegado aunque este
+        // navegador ya tenga el pitch desbloqueado de una visita anterior.
+        // Es para poder revisar la página como la ve alguien que entra por
+        // primera vez, sin tener que borrar el almacenamiento a mano. No se
+        // documenta en la interfaz: es solo para quien construye el sitio.
+        if (vista === 'inicio') {
+          try {
+            localStorage.removeItem('pet-vsl-pitch');
+            localStorage.removeItem('pet-oferta-fin');
+            localStorage.removeItem('pet-vsl-progreso:masterclass');
+          } catch (e) {}
+          return; // se queda bloqueada
+        }
+
+        // ?vista=desplegada — el espejo: la página tal como queda cuando el
+        // visitante ya llegó al minuto del pitch, sin tener que ver el video
+        // entero para revisarla.
+        //
+        // ?vista=vencida hace lo mismo y además fuerza el estado post-24h
+        // (eso lo aplica lib/oferta.ts): sin desplegar la página, no habría
+        // nada que mirar de esa franja.
+        if (vista === 'desplegada' || vista === 'vencida') {
+          try {
+            localStorage.setItem('pet-vsl-pitch', '1');
+          } catch (e) {}
+          raiz.classList.remove('pitch-bloqueado');
+          return;
+        }
+
+        try {
+          // Ya llegó al pitch en una visita anterior: no se le vuelve a
+          // esconder la página ni tiene que ver el video de nuevo.
+          if (localStorage.getItem('pet-vsl-pitch') === '1') {
+            raiz.classList.remove('pitch-bloqueado');
+          }
+        } catch (e) {
+          /* localStorage bloqueado: se queda bloqueada, se desbloquea viendo el video */
+        }
+      })();
+    </script>
+
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Plan de Edición Total",
+        "description": "Programa de 6 módulos para aprender edición de video profesional en Premiere Pro y CapCut.",
+        "url": "https://planediciontotal.com/"
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "¿Sirve si nunca he editado un video?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Sí. El Módulo 1 empieza en el criterio de un editor, no en botones de software — está pensado para alguien que arranca de cero."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Necesito tener \"buen ojo\" o ser creativo de por sí?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. El método enseña a tomar esas decisiones con criterio — ritmo, corte, composición — en vez de depender de talento previo."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Qué necesito para tomar el curso?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Premiere Pro y/o CapCut instalados. El Módulo 5 (CapCut) y el Módulo 6 (Premiere Pro) están pensados para computador, no para celular."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Qué incluye el Plan de Edición Total?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "6 módulos: 4 de fundamentos y criterio de edición que aplican a cualquier programa, 1 especializado en Premiere Pro y 1 en CapCut para computador."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Qué pasa si compro después de las 24 horas?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "El programa completo (6 módulos) sigue costando lo mismo. Lo que cambia es el bono del módulo de Inteligencia Artificial: viene incluido gratis solo dentro de las primeras 24 horas después de ver la clase; después hay que agregarlo aparte por 27 USD."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Es un pago único o hay cuotas?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Pago único de 38 USD por cada período de 6 meses de acceso. Se renueva automáticamente cada 6 meses; podés cancelar la renovación cuando quieras desde tu cuenta de Hotmart."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Cómo recibo el acceso?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "El acceso se entrega por correo electrónico apenas se confirma la compra."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Qué pasa si no me gusta o no es lo que esperaba?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Tienes 7 días de garantía. La devolución es automática con Hotmart, no con nosotros."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Es seguro pagar aquí?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Sí, totalmente. El pago lo procesa Hotmart, una de las plataformas de venta de cursos más grandes de Latinoamérica, con cifrado de compra segura de extremo a extremo — aceptan Visa, Mastercard, PayPal, entre otros."
+            }
+          }
+        ]
+      }
+    </script>
+    <script type="module" crossorigin src="/assets/index-DGv1Qvxj.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-D1safyUK.css">
+  </head>
+
+  <body>
+    <a class="saltar-contenido" href="#contenido">Saltar al contenido</a>
+
+    <!-- ══ Banner de oferta ══════════════════════════════════════════
+         Barra fija arriba — position:fixed, clavada al tope del viewport
+         sin importar el scroll. body tiene padding-top reservado en
+         sitio.css para que esto no tape el contenido de debajo.
+         Pedido explícito del cliente (2026-08-09, con referencia visual):
+         franja sólida de borde a borde en el naranja de marca, no la
+         cápsula flotante translúcida que tenía antes — contador, icono y
+         leyenda en una sola fila.
+         Tamaño reducido ~30% (pedido explícito, 2026-08-09): con el
+         tamaño original, "Termina la oferta especial" no cabía en una
+         sola línea en teléfonos angostos (320-360px) y envolvía a 2-3
+         líneas — verificado con Playwright en 320/360/375/390/768/1024/
+         1440 tras el ajuste, cabe en una sola línea en todos.
+         data-oferta-estado="activa" en el contenedor entero: pasadas las
+         24h el banner completo desaparece, no queda ningún resto (ni
+         siquiera un mensaje de reemplazo) — mismo mecanismo genérico que
+         usa el resto de la página. -->
+    <div
+      class="fixed inset-x-0 top-0 z-50 w-full"
+      data-block="oferta-banner"
+      data-oferta-estado="activa"
+      data-pitch
+      style="background: var(--color-primario)"
+    >
+      <div
+        class="contenedor flex items-center justify-center gap-[var(--spacing-2xs)] py-[var(--spacing-3xs)] text-center md:py-[var(--spacing-2xs)]"
+      >
+        <p class="banner-contador font-display text-[1.05rem] leading-none tabular-nums text-white md:text-[1.35rem]">
+          <span data-cuenta-regresiva>24:00:00</span>
+        </p>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" class="shrink-0 text-white" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6" />
+          <path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+        </svg>
+        <p class="text-xs font-semibold text-white md:text-sm">Termina la oferta especial</p>
+      </div>
+    </div>
+
+    <!-- ══ WhatsApp flotante ═════════════════════════════════════════
+         Lleva `data-pitch`: en la vista de inicio no existe. Mientras el
+         visitante está viendo la clase no hay nada que preguntar todavía, y
+         una burbuja de soporte ahí solo compite con el único objetivo de esa
+         pantalla, que es darle play.
+
+         Cuando el CTA baja a la franja, este pasa a ser el 20% derecho de
+         esa misma franja (ver .wa-flotante en sitio.css): entre los dos
+         ocupan el ancho completo y ninguno tapa al otro.
+
+         El mensaje va prellenado en el enlace, así que el visitante llega
+         al chat con el contexto ya escrito y solo tiene que enviar. -->
+    <a
+      class="wa-flotante"
+      href="https://wa.me/573237158237?text=Hola%2C%20ya%20vi%20la%20clase%20pero%20a%C3%BAn%20tengo%20dudas..."
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Escribir por WhatsApp"
+      data-wa-flotante
+      data-pitch
+    >
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path
+          d="M17.5 14.4c-.3-.2-1.7-.9-2-1-.3-.1-.5-.1-.7.1-.2.3-.7 1-.9 1.2-.2.2-.3.2-.6.1-.3-.2-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.4.1-.6l.5-.6c.1-.2.2-.3.3-.5 0-.2 0-.4 0-.5 0-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5 4.5.7.3 1.2.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 1.9-1.4.2-.7.2-1.3.2-1.4-.1-.2-.3-.2-.6-.3Z"
+        />
+        <path
+          d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2Zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3.1.8.8-3-.2-.3A8.2 8.2 0 1 1 12 20.2Z"
+        />
+      </svg>
+    </a>
+
+    <!--
+      Sin header: es una página de una sola acción, comprar. No se le da al
+      visitante ninguna salida antes del CTA.
+    -->
+    <main id="contenido" tabindex="-1">
+      <!-- ══ Hero + VSL ═══════════════════════════════════════════
+           La masterclass es lo único que se ve al entrar. Todo lo que hay
+           de aquí para abajo lleva `data-pitch` y está oculto hasta que el
+           visitante llega al minuto del pitch (ver lib/pitch.ts).
+
+           No hay header ni ninguna otra salida: la única acción posible en
+           esta pantalla es darle play.
+      -->
+      <!-- overflow-clip: sin esto el video sticky se sigue pintando pegado a
+           la pantalla mucho después de que esta sección termine, tapando el
+           título de la siguiente. El truco de margin-bottom negativo que
+           cancela el espacio en el flujo (ver .hero-fondo en sitio.css) hace
+           que el navegador calcule mal hasta dónde puede "pegarse" el
+           sticky; overflow-clip lo recorta a los límites reales de la
+           sección. -->
+      <div class="hero-bloque">
+        <div class="hero-fondo" aria-hidden="true">
+          <video
+            data-video-hero
+            autoplay
+            muted
+            loop
+            playsinline
+            preload="auto"
+            poster="/hero/video-hero-venta-poster.webp"
+            width="1280"
+            height="720"
+          >
+            <source src="/hero/video-hero-venta.mp4" type="video/mp4" media="(min-width: 768px)" />
+          </video>
+        </div>
+      <section class="seccion" data-block="hero-vsl">
+        <!-- El <source media> solo carga el video desde tablet (768px+): en
+             móvil, que es la mayoría del tráfico, se queda con el poster
+             estático — decodificar un video de fondo ahí, además del VSL que
+             es el que importa, es donde más rendimiento se pierde.
+             autoplay/muted/loop van en el HTML (fail-open, funciona sin JS);
+             main.ts solo lo pausa si se pide menos movimiento. -->
+
+        <div class="relative contenedor flex flex-col items-center gap-[var(--spacing-md)] text-center">
+          <div class="hero-encabezado flex flex-col items-center gap-[var(--spacing-sm)] text-center">
+            <p
+              class="mt-[var(--spacing-sm)] text-[0.7rem] font-semibold tracking-[0.1em] uppercase md:mt-[var(--spacing-md)]"
+              style="color: var(--color-primario)"
+              data-revelar
+            >
+              La clase de edición en VIVO empezó hace unos segundos...
+            </p>
+
+            <!-- Las mayúsculas van en naranja: son las que cargan la promesa
+                 (qué aprende, para qué, y que es gratis). El resto en blanco
+                 hace de conector — sin ese contraste, un titular todo en
+                 naranja no jerarquiza nada. -->
+            <!-- Dos redacciones del mismo titular, una por tamaño. En un
+                 teléfono el titular largo ocupa media pantalla y empuja el
+                 reproductor fuera de la vista, que es justo lo que no puede
+                 pasar en una página cuya única acción es darle play. Se
+                 alternan con CSS (.solo-movil / .desde-tablet) y no con JS
+                 para que no haya un instante con el titular equivocado.
+                 Un solo <h1> real por documento: el de móvil es el <h1> y el
+                 de tablet en adelante también — solo uno está en pantalla a
+                 la vez, y el que se oculta lo hace con display:none, así que
+                 los lectores de pantalla tampoco leen los dos. -->
+            <h1
+              class="font-display solo-movil w-full text-[1.55rem] leading-[1.3] text-white"
+              data-revelar
+            >
+              Aprende gratis a <span style="color: var(--color-primario)">EDITAR VIDEOS</span>
+              en esta clase en vivo solo por <span style="color: var(--color-primario)">HOY</span>
+            </h1>
+
+            <h1
+              class="font-display desde-tablet w-full leading-[1.3] text-white md:text-[2.25rem] lg:text-[2.5rem]"
+              data-revelar
+            >
+              Aprende a <span style="color: var(--color-primario)">EDITAR TUS PROPIOS VIDEOS</span>
+              para <span style="color: var(--color-primario)">TU NEGOCIO</span> o
+              <span style="color: var(--color-primario)">MARCA PERSONAL</span> de manera
+              <span style="color: var(--color-primario)">GRATIS HOY</span>
+            </h1>
+
+            <p class="hero-parrafo text-[var(--texto-secundario)]" data-revelar>
+              Descubre cómo se hacen esos videos que atraen vistas y seguidores en redes sociales en
+              esta clase en vivo preparada específicamente para ti. Aprende el método de edición de 5
+              pasos que ha generado más de
+              <strong class="font-semibold" style="color: var(--color-primario)">2 MILLONES DE DÓLARES</strong>
+              en revenue para diferentes industrias.
+            </p>
+
+            <!-- Píldora de prueba social. El número lo mueve
+                 lib/contador-vivo.ts: arranca en 105 y fluctúa en saltos de
+                 20-60 con sesgo al alza, hasta un tope de 345 — gente
+                 entrando y saliendo de una clase en vivo, no un contador que
+                 solo sube. -->
+            <div
+              class="inline-flex items-center gap-[var(--spacing-2xs)] rounded-full bg-black/40 px-[var(--spacing-sm)] py-[var(--spacing-3xs)] text-sm text-white"
+              data-revelar
+            >
+              <span class="punto-vivo" aria-hidden="true"></span>
+              Ya están viendo <span class="tabular-nums" data-contador-vivo-numero>105</span>
+            </div>
+          </div>
+
+          <!-- ══ El reproductor ═══════════════════════════════════════
+               Patrón VSL: sin barra, sin play/pausa y sin poder adelantar.
+               Ver lib/reproductor.ts y references/reproductor-video.md.
+
+               `controls` viene puesto en el HTML y lo quita el JS al final
+               de engancharlo todo: es el fail-open del patrón — si el
+               script no llega a correr, el visitante se queda con los
+               controles nativos en vez de con un video que no hay forma de
+               reproducir.
+
+               controlslist + disablepictureinpicture cierran las dos
+               puertas traseras que quedaban para adelantar el video desde
+               la interfaz del propio navegador (menú contextual y ventana
+               flotante). El anti-scrub de reproductor.ts cubre el resto.
+
+               width/height y el aspect-ratio del contenedor reservan el
+               hueco desde el primer pintado — sin eso, al cargar el video
+               la página entera daría un salto (lo exige `npm run gate`, y
+               es la mitad del presupuesto de CLS).
+          -->
+          <div class="vsl w-full max-w-[880px]" data-vsl="masterclass" data-revelar>
+            <video
+              class="vsl__video"
+              data-vsl-video
+              controls
+              controlslist="nodownload noplaybackrate nofullscreen"
+              disablepictureinpicture
+              playsinline
+              preload="none"
+              poster="/vsl/masterclass-poster.webp"
+              width="1280"
+              height="720"
+            >
+              <!-- PENDIENTE: el video real de la masterclass. -->
+              <source src="/vsl/masterclass.mp4" type="video/mp4" />
+            </video>
+
+            <!-- Portada de la previa. Detrás corre el video mudo en bucle
+                 (lo arranca reproductor.ts) y esta capa lo desenfoca: se ve
+                 que algo está pasando, pero no qué — que es exactamente lo
+                 que sostiene el "te lo estás perdiendo".
+
+                 El clic del botón no es decorativo: sin una interacción real
+                 del usuario el navegador silencia cualquier reproducción, así
+                 que ese clic es lo que compra el permiso del audio. -->
+            <div class="vsl__portada vsl__vidrio" data-vsl-portada>
+              <!-- Dos copys para la misma portada. El de urgencia solo tiene
+                   sentido para quien no ha visto la clase; a quien vuelve
+                   con la oferta ya desplegada, decirle que se la está
+                   perdiendo es incoherente y le resta credibilidad a todo lo
+                   demás. lib/reproductor.ts alterna entre los dos según el
+                   estado del pitch. -->
+              <p class="vsl__aviso" data-vsl-aviso="primera-vez">
+                TE ESTÁS PERDIENDO DE LA CLASE EN VIVO,<br />DALE CLICK AHORA…
+              </p>
+              <p class="vsl__aviso" data-vsl-aviso="ya-vista" hidden>
+                YA VISTE ESTA CLASE.<br />PUEDES VOLVER A VERLA CUANDO QUIERAS.
+              </p>
+
+              <button type="button" class="vsl__arrancar" data-vsl-arrancar>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+                <span data-vsl-arrancar-texto>Ver la masterclass</span>
+              </button>
+
+              <p class="vsl__pie">
+                No olvides <strong>ACTIVAR EL AUDIO</strong> de tu dispositivo
+              </p>
+            </div>
+
+            <!-- Diálogo de retomar: aparece encima de la portada cuando hay
+                 progreso guardado de una visita anterior. -->
+            <div class="vsl__retomar" data-vsl-retomar hidden>
+              <p class="text-sm text-[var(--texto-secundario)]">Ya habías empezado a ver esta clase.</p>
+              <div class="vsl__retomar-acciones">
+                <button type="button" class="boton boton-primario" data-vsl-continuar>
+                  Continuar donde iba
+                </button>
+                <button type="button" class="boton boton-secundario" data-vsl-reiniciar>
+                  Empezar de nuevo
+                </button>
+              </div>
+            </div>
+
+            <!-- Pantalla final, al terminar el video: la miniatura de fondo
+                 con la misma capa de desenfoque de la previa, y las dos
+                 salidas que tiene el visitante en ese momento — comprar, o
+                 preguntar antes de comprar.
+
+                 El de WhatsApp va en verde y no en el naranja de marca a
+                 propósito: no compite con el de compra, se lee como "otra
+                 cosa" a primera vista. -->
+            <div class="vsl__final" data-vsl-final hidden>
+              <img
+                class="vsl__final-fondo"
+                src="/vsl/miniatura-final.webp"
+                alt=""
+                width="1280"
+                height="720"
+                loading="lazy"
+                decoding="async"
+              />
+              <div class="vsl__final-contenido vsl__vidrio">
+                <a
+                  class="boton-comprar boton-comprar--compacto"
+                  href="https://pay.hotmart.com/PENDIENTE-OFERTA"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-cta-compra
+                >
+                  QUIERO APRENDER HOY
+                </a>
+                <a
+                  class="boton-whatsapp"
+                  href="https://wa.me/573237158237?text=Hola%2C%20ya%20vi%20la%20clase%20pero%20a%C3%BAn%20tengo%20dudas..."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path
+                      d="M17.5 14.4c-.3-.2-1.7-.9-2-1-.3-.1-.5-.1-.7.1-.2.3-.7 1-.9 1.2-.2.2-.3.2-.6.1-.3-.2-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.4.1-.6l.5-.6c.1-.2.2-.3.3-.5 0-.2 0-.4 0-.5 0-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5 4.5.7.3 1.2.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 1.9-1.4.2-.7.2-1.3.2-1.4-.1-.2-.3-.2-.6-.3Z"
+                    />
+                    <path
+                      d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2Zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3.1.8.8-3-.2-.3A8.2 8.2 0 1 1 12 20.2Z"
+                    />
+                  </svg>
+                  NECESITO SOPORTE POR WHATSAPP
+                </a>
+              </div>
+            </div>
+
+            <!-- ══ Volumen ══════════════════════════════════════════
+                 El único control del reproductor, y a propósito: el volumen
+                 no permite saltarse nada, así que no compite con el objetivo
+                 de la página — pero sin ningún control de audio, un video
+                 que suena sería un fallo de accesibilidad (WCAG 1.4.2).
+
+                 El icono refleja el estado real: bocina sola cuando no está
+                 sonando, tachada cuando está en silencio, y con 1, 2 o 3
+                 ondas según el volumen. Lo gobierna lib/volumen.ts. -->
+            <!-- Play/pausa. Solo aparece con el video ya arrancado: en la
+                 previa el único botón que debe existir es el de empezar.
+                 Pausar no permite saltarse el pitch, así que no compite con
+                 el objetivo de la página. -->
+            <button type="button" class="vsl__play" data-vsl-play aria-label="Pausar">
+              <svg data-vsl-play-icono="pausa" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" />
+              </svg>
+              <svg data-vsl-play-icono="play" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="display: none">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </button>
+
+            <div class="volumen" data-volumen>
+              <button type="button" class="volumen__boton" data-volumen-boton aria-label="Volumen">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4 9v6h4l5 4V5L8 9H4Z" fill="currentColor" />
+                  <path
+                    data-volumen-onda
+                    d="M14.8 9.6a3.4 3.4 0 0 1 0 4.8"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    data-volumen-onda
+                    d="M17.1 7.4a6.6 6.6 0 0 1 0 9.2"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    data-volumen-onda
+                    d="M19.4 5.2a9.8 9.8 0 0 1 0 13.6"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    data-volumen-tachado
+                    d="M15 9.5l5 5m0-5l-5 5"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    style="display: none"
+                  />
+                </svg>
+              </button>
+
+              <input
+                class="volumen__rango"
+                type="range"
+                min="0"
+                max="100"
+                value="100"
+                step="1"
+                data-volumen-rango
+                aria-label="Nivel de volumen"
+              />
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ══ CTA principal ═══════════════════════════════════════════
+           Sección propia y NO dentro del hero, aunque visualmente vaya
+           pegado debajo del video. El motivo es concreto: la sección del
+           hero lleva `overflow-clip` para que el video de fondo sticky no
+           se pinte fuera de ella, y ese recorte también se aplica a un
+           `position: fixed` descendiente — con el botón dentro, al pasar a
+           la franja inferior quedaba recortado y no recibía ni los clics,
+           por mucho z-index que tuviera.
+      -->
+      <section class="seccion-cta" data-block="cta-principal">
+        <div class="contenedor flex justify-center">
+          <!-- Aquí va el fragmento de checkout ═══════════════════════════════════════
+               Es EL botón de compra de la página: el único con
+               `data-cta-compra`, y el que abre el popup de Hotmart.
+
+               Aquí va el fragmento de checkout que pasa el cliente (uno
+               para la oferta de 24h y otro para el precio normal). Sea cual
+               sea, el enlace tiene que conservar `data-cta-compra`: con ese
+               atributo hereda sin código nuevo el href correcto según el
+               estado de la oferta (lib/oferta.ts), el evento
+               `clic_comprar` de lib/tracking.ts y el `clic_cta` de
+               lib/retencion.ts.
+
+               El div de anclaje no es envoltorio de más: reserva el hueco
+               del botón para que, cuando este pase a flotar abajo, la
+               página no dé un salto de layout. Ver lib/cta-flotante.ts.
+          -->
+          <div class="cta-anclaje" data-pitch data-cta-anclaje>
+            <a
+              class="boton-comprar"
+              href="https://pay.hotmart.com/PENDIENTE-OFERTA"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-cta-compra
+            >
+              <span class="boton-comprar__texto">QUIERO APRENDER HOY</span>
+            </a>
+          </div>
+        </div>
+      </section>
+      </div>
+
+      <!-- ══ Antes del pitch ══════════════════════════════════════════
+           Esta sección es la única de la página con `data-pre-pitch` en vez
+           de `data-pitch`: se ve MIENTRAS el visitante está viendo la clase
+           y desaparece en cuanto se despliega la oferta. Es lo que ocupa el
+           hueco bajo el video durante la parte larga de la visita — sin
+           ella, quien hace scroll mientras mira encuentra una página vacía y
+           se va. Cuando llega el pitch ya no hace falta: ahí abajo aparece
+           todo lo demás, y estos mismos testimonios vuelven, en su sección
+           completa y con los videos.
+      -->
+      <section class="seccion" data-block="testimonials-previa" data-pre-pitch>
+        <div class="contenedor flex flex-col items-center gap-[var(--spacing-md)]">
+          <!-- El banner abre la sección, encima del título. Mudo, en bucle
+               y sin controles: es una pieza gráfica en movimiento, no
+               contenido que se mire, y no compite con el audio de la clase
+               que está sonando arriba. Mismo ancho que las citas. -->
+          <video
+            class="banner-video"
+            muted
+            loop
+            playsinline
+            preload="none"
+            poster="/testimonios/banner-pet-poster.webp"
+            width="1600"
+            height="200"
+            aria-hidden="true"
+            data-banner-video
+          >
+            <source src="/testimonios/banner-pet.mp4" type="video/mp4" />
+          </video>
+
+          <p
+            class="text-[0.7rem] font-semibold tracking-[0.1em] uppercase"
+            style="color: var(--color-primario)"
+          >
+            Lo que dicen quienes ya lo hicieron
+          </p>
+
+          <!-- Columnas de masonry en vez de grid: las citas son de largos muy
+               distintos (una es de un renglón, otra de seis) y en un grid las
+               filas se igualan a la más alta, dejando huecos enormes bajo las
+               cortas. Con columns cada tarjeta ocupa solo lo que necesita. -->
+          <div class="testimonios-columnas w-full">
+            <figure class="tarjeta flex flex-col gap-[var(--spacing-2xs)]" data-revelar data-revelar-retraso="0">
+              <div class="text-sm" style="color: var(--color-primario)" aria-label="5 de 5 estrellas">
+                ★★★★★
+              </div>
+              <blockquote class="prosa text-sm leading-relaxed">Muchas gracias, está genial el curso ✨</blockquote>
+              <figcaption class="mt-auto text-sm font-semibold">
+                Stephany González
+                <span class="block font-normal text-[var(--texto-secundario)]">3 meses aprendiendo</span>
+              </figcaption>
+            </figure>
+            <figure class="tarjeta flex flex-col gap-[var(--spacing-2xs)]" data-revelar data-revelar-retraso="1">
+              <div class="text-sm" style="color: var(--color-primario)" aria-label="5 de 5 estrellas">
+                ★★★★★
+              </div>
+              <blockquote class="prosa text-sm leading-relaxed">Lo más atractivo es lo que más vende. Obtuve conocimientos en videos con IA gracias a Juan y a la formación, y eso que pasé tantos años aprendiendo en la universidad, pero el curso está tan condensado y tan bien hecho que es simplemente increíble.</blockquote>
+              <figcaption class="mt-auto text-sm font-semibold">
+                Juan Guzmán
+                <span class="block font-normal text-[var(--texto-secundario)]">Realizador Audiovisual</span>
+              </figcaption>
+            </figure>
+            <figure class="tarjeta flex flex-col gap-[var(--spacing-2xs)]" data-revelar data-revelar-retraso="2">
+              <div class="text-sm" style="color: var(--color-primario)" aria-label="5 de 5 estrellas">
+                ★★★★★
+              </div>
+              <blockquote class="prosa text-sm leading-relaxed">Antes del curso me costaba dominar las herramientas de los programas de edición y tener agilidad a la hora de editar. Juan Camilo explica paso a paso con detalles y efectos prácticos. Ahora trabajo como editor de video con clientes y tengo libertad y tiempo.</blockquote>
+              <figcaption class="mt-auto text-sm font-semibold">
+                David Rodríguez
+                <span class="block font-normal text-[var(--texto-secundario)]">Emprendedor Digital</span>
+              </figcaption>
+            </figure>
+            <figure class="tarjeta flex flex-col gap-[var(--spacing-2xs)]" data-revelar data-revelar-retraso="0">
+              <div class="text-sm" style="color: var(--color-primario)" aria-label="5 de 5 estrellas">
+                ★★★★★
+              </div>
+              <blockquote class="prosa text-sm leading-relaxed">Antes del curso no tenía ni idea sobre edición, solo me defendía en CapCut. Quería aprender Premiere Pro pero no sabía cómo ni por dónde empezar. El curso fue todo lo que necesitaba, con videos cortos y entretenidos. Pude alcanzar mis objetivos en un mes.</blockquote>
+              <figcaption class="mt-auto text-sm font-semibold">
+                Juanita Ortíz
+                <span class="block font-normal text-[var(--texto-secundario)]">Médico</span>
+              </figcaption>
+            </figure>
+            <figure class="tarjeta flex flex-col gap-[var(--spacing-2xs)]" data-revelar data-revelar-retraso="1">
+              <div class="text-sm" style="color: var(--color-primario)" aria-label="5 de 5 estrellas">
+                ★★★★★
+              </div>
+              <blockquote class="prosa text-sm leading-relaxed">Mis ediciones eran solo cortar, pegar y poner subtítulos. Cuando conocí a Juan Camilo mi cabeza explotó, mis habilidades mejoraron en un 200%, todo lo que aprendí fue muy rápido y eficaz. Siempre hubo un acompañamiento constante. Ahora trabajo con influencers y con marcas gigantes a nivel nacional.</blockquote>
+              <figcaption class="mt-auto text-sm font-semibold">
+                Valentina Rojas
+                <span class="block font-normal text-[var(--texto-secundario)]">Editora de Video</span>
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ El mentor ════════════════════════════════════════════════
+           `data-pre-pitch`, como los testimonios de arriba: se ve mientras
+           el visitante mira la clase y desaparece cuando se despliega la
+           oferta. Saber quién está enseñando ayuda a quedarse a ver; una vez
+           que llega el pitch, el espacio es para el precio y lo que incluye.
+      -->
+      <section id="mentor" class="seccion" data-block="bio" data-pre-pitch>
+        <div class="contenedor">
+          <div class="mentor">
+            <div class="mentor__foto" data-revelar>
+              <img
+                src="/mentor/juan-perfil.webp"
+                alt="Juan Camilo, mentor del Plan de Edición Total, en su estudio de edición"
+                width="900"
+                height="1200"
+                loading="lazy"
+                decoding="async"
+              />
+              <span class="mentor__pildora">EDITOR EXPERTO · JUAN CAMILO</span>
+            </div>
+
+            <!-- Título y párrafo son hermanos y no un solo bloque: en móvil
+                 el orden es título → foto → cifras → párrafo, así que tienen
+                 que poder colocarse por separado. En escritorio vuelven a
+                 juntarse en la columna derecha. -->
+            <div class="mentor__titulo" data-revelar data-revelar-retraso="1">
+              <p class="mentor__ojo">— TU MENTOR</p>
+              <h2 class="font-display mentor__nombre">
+                SOY <span style="color: var(--color-primario)">JUAN CAMILO</span>
+              </h2>
+            </div>
+
+            <div class="mentor__texto" data-revelar data-revelar-retraso="2">
+              <p class="mentor__bio prosa">
+                ¡Hola, soy Juan! Quiero compartir contigo mis conocimientos en Marketing Digital,
+                edición de video e Inteligencia Artificial en esta clase en vivo. He generado más de
+                <strong>2 millones de dólares</strong> en revenue para las personas con las que he
+                trabajado. Te enseñaré cómo editar videos orgánicos con efectos que atraigan, videos
+                de ventas (VSL) con alta retención y conversión, y cómo usar la Inteligencia
+                Artificial para tu marca personal o negocio en redes sociales. Llevo más de 8 años
+                editando contenido, viajando por el mundo, y ahora quiero entregarte todo lo que he
+                aprendido. Nos vemos adentro.
+              </p>
+
+            </div>
+
+            <dl class="mentor__cifras">
+                <div>
+                  <dt class="mentor__cifra">+2 MILLONES</dt>
+                  <dd class="mentor__rotulo">DE DÓLARES<br />EN REVENUE</dd>
+                </div>
+                <div>
+                  <dt class="mentor__cifra">+15</dt>
+                  <dd class="mentor__rotulo">INDUSTRIAS<br />DIFERENTES</dd>
+                </div>
+                <div>
+                  <dt class="mentor__cifra">+1.000</dt>
+                  <dd class="mentor__rotulo">VIDEOS<br />EDITADOS</dd>
+                </div>
+                <div>
+                  <dt class="mentor__cifra">+50</dt>
+                  <dd class="mentor__rotulo">ALUMNOS<br />1 A 1</dd>
+                </div>
+            </dl>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ Precio ═══════════════════════════════════════════════════
+           Antes vivía dentro del hero, con el checkout de Hotmart embebido
+           en un iframe al lado. Ahora la compra sale a la web de Hotmart,
+           así que esto vuelve a ser lo que siempre debió: una sola tarjeta
+           de oferta, centrada, con el botón que redirige.
+      -->
+      <section id="precio" class="seccion" data-block="pricing" data-pitch>
+        <div class="contenedor">
+          <div class="precio-grid">
+            <div
+              class="tarjeta flex w-full flex-col gap-[var(--spacing-sm)] text-center"
+              data-oferta-tarjeta
+              data-revelar
+            >
+              <div>
+                <!-- Mientras la oferta está activa se ve el mockup con el
+                     bono de IA incluido (BOTH FRONT); al vencer, el mockup
+                     sin el bono (MAIN FRONT) — mismo mecanismo genérico de
+                     data-oferta-estado que usa todo lo demás. -->
+                <div class="imagen-resplandor mb-[var(--spacing-sm)]" data-oferta-estado="activa">
+                  <img
+                    src="/modulos/both-front.webp"
+                    alt=""
+                    width="1000"
+                    height="667"
+                    loading="lazy"
+                    decoding="async"
+                    class="w-full rounded-[var(--radius-md)]"
+                  />
+                </div>
+                <div class="imagen-resplandor mb-[var(--spacing-sm)]" data-oferta-estado="vencida" hidden>
+                  <img
+                    src="/modulos/main-front-v2.webp"
+                    alt=""
+                    width="1000"
+                    height="667"
+                    loading="lazy"
+                    decoding="async"
+                    class="w-full rounded-[var(--radius-md)]"
+                  />
+                </div>
+                <h2 class="font-display text-[2.5rem] leading-none">
+                  38 <span class="text-base align-top text-[var(--texto-secundario)]">USD</span>
+                </h2>
+                <p class="mt-[var(--spacing-3xs)] text-sm text-[var(--texto-secundario)]">
+                  Pago único. Acceso por 6 meses (renovación automática).
+                </p>
+              </div>
+
+              <ul class="prosa flex flex-col gap-[var(--spacing-2xs)] text-left text-sm">
+                <li class="flex gap-[var(--spacing-2xs)]">
+                  <span class="text-[var(--estado-exito)]" aria-hidden="true">✓</span>
+                  Acceso por 6 meses (renovación automática)
+                </li>
+                <li class="flex gap-[var(--spacing-2xs)]">
+                  <span class="text-[var(--estado-exito)]" aria-hidden="true">✓</span>
+                  6 módulos completos — fundamentos, Premiere Pro y CapCut
+                </li>
+                <li class="flex gap-[var(--spacing-2xs)]">
+                  <span class="text-[var(--estado-exito)]" aria-hidden="true">✓</span>
+                  Soporte por WhatsApp
+                </li>
+                <li class="flex gap-[var(--spacing-2xs)]">
+                  <span class="text-[var(--estado-exito)]" aria-hidden="true">✓</span>
+                  Acceso entregado por correo electrónico
+                </li>
+                <li class="flex gap-[var(--spacing-2xs)]">
+                  <span class="text-[var(--estado-exito)]" aria-hidden="true">✓</span>
+                  7 días de garantía — devolución automática con Hotmart, no con nosotros
+                </li>
+              </ul>
+
+              <div class="border-t border-[var(--linea)] pt-[var(--spacing-sm)] text-left">
+                <p
+                  class="flex items-center gap-[var(--spacing-3xs)] text-sm font-semibold titulo-marca uppercase tracking-[0.06em]"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                      d="M20 12v9H4v-9M2 7h20v5H2V7Zm10 0V4a2.5 2.5 0 0 0-5 0v3m5 0V4a2.5 2.5 0 0 1 5 0v3M12 7v14"
+                      stroke="currentColor"
+                      stroke-width="1.6"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                  Bonos incluidos
+                </p>
+                <ul class="mt-[var(--spacing-2xs)] flex flex-col gap-[var(--spacing-2xs)] text-sm">
+                  <li class="flex gap-[var(--spacing-2xs)]">
+                    <span class="text-[var(--estado-exito)]" aria-hidden="true">✓</span>
+                    Clase de miniaturas
+                  </li>
+                  <li class="flex gap-[var(--spacing-2xs)]">
+                    <span class="text-[var(--estado-exito)]" aria-hidden="true">✓</span>
+                    Módulo de Ganchos Virales
+                  </li>
+                  <li class="flex gap-[var(--spacing-2xs)]">
+                    <span class="text-[var(--estado-exito)]" aria-hidden="true">✓</span>
+                    Presets de Premiere Pro
+                  </li>
+                  <!-- Al final y resaltado aparte — antes competía con el
+                       título "Bonos incluidos" de arriba por usar el mismo
+                       naranja-sobre-blanco. Ahora es su propia franja
+                       naranja con texto blanco, igual que el nombre debajo
+                       de cada video testimonio: es el único bono que
+                       desaparece cuando pase la oferta de 24h, tiene que
+                       notarse distinto al resto de la lista.
+                       Lleva el parpadeo que antes tenía el botón "Compra
+                       ahora o llena el formulario" (ya eliminado) — dirige
+                       la vista sin necesidad de un elemento aparte. -->
+                  <li
+                    class="parpadeo mt-[var(--spacing-3xs)] flex items-center justify-center gap-[var(--spacing-2xs)] rounded-[var(--radius-md)] px-[var(--spacing-2xs)] py-[var(--spacing-3xs)] text-center font-semibold text-white"
+                    data-oferta-estado="activa"
+                    style="background: color-mix(in srgb, var(--color-primario) 92%, transparent)"
+                  >
+                    Módulo de Inteligencia Artificial
+                    <span
+                      class="shrink-0 rounded-full bg-white/20 px-[var(--spacing-3xs)] py-[2px] text-[10px] font-bold tracking-[0.04em] uppercase"
+                      >24h</span
+                    >
+                  </li>
+                  <li
+                    class="mt-[var(--spacing-3xs)] flex gap-[var(--spacing-2xs)] text-[var(--texto-secundario)]"
+                    data-oferta-estado="vencida"
+                    hidden
+                  >
+                    <span aria-hidden="true">＋</span>
+                    Módulo de Inteligencia Artificial — se agrega aparte por 27 USD
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Sin botón de compra aquí a propósito (pedido explícito):
+                   el único CTA de la página es el del hero, que a partir de
+                   esta sección ya viene flotando abajo en pantalla. Dos
+                   botones de compra a la vez se estorban entre sí. -->
+
+              <p class="text-xs text-[var(--texto-secundario)]">
+                Pago seguro procesado por Hotmart · Visa · Mastercard · PayPal · entre otros
+              </p>
+            </div>
+
+            <!-- Sellos de confianza. En escritorio van en columna a la
+                 derecha del precio (pedido explícito): puestos en fila
+                 debajo quedaban como un pie de página y se leían después de
+                 haber decidido, cuando su trabajo es acompañar la decisión.
+                 En móvil siguen en rejilla de dos, que es lo que cabe. -->
+            <div class="precio-sellos">
+            <div class="tarjeta flex flex-col items-center gap-[var(--spacing-2xs)] text-center" data-revelar data-revelar-retraso="0">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" class="titulo-marca" aria-hidden="true">
+                <path
+                  d="M12 2 4 5v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V5l-8-3Z"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                />
+              </svg>
+              <p class="font-semibold titulo-marca">Privacidad</p>
+              <p class="text-sm text-[var(--texto-secundario)]">Tu información está protegida</p>
+            </div>
+            <div class="tarjeta flex flex-col items-center gap-[var(--spacing-2xs)] text-center" data-revelar data-revelar-retraso="1">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" class="titulo-marca" aria-hidden="true">
+                <rect x="5" y="10" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.6" />
+                <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.6" />
+              </svg>
+              <p class="font-semibold titulo-marca">Compra segura</p>
+              <p class="text-sm text-[var(--texto-secundario)]">Pago cifrado por Hotmart</p>
+            </div>
+            <div class="tarjeta flex flex-col items-center gap-[var(--spacing-2xs)] text-center" data-revelar data-revelar-retraso="2">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" class="titulo-marca" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.6" />
+                <path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="1.6" />
+              </svg>
+              <p class="font-semibold titulo-marca">Entrega por email</p>
+              <p class="text-sm text-[var(--texto-secundario)]">Acceso apenas se confirma la compra</p>
+            </div>
+            <div class="tarjeta flex flex-col items-center gap-[var(--spacing-2xs)] text-center" data-revelar data-revelar-retraso="0">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" class="titulo-marca" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6" />
+                <path d="m8 12.5 2.5 2.5L16 9.5" stroke="currentColor" stroke-width="1.6" />
+              </svg>
+              <p class="font-semibold titulo-marca">Garantía 7 días</p>
+              <p class="text-sm text-[var(--texto-secundario)]">Devolución automática con Hotmart, no con nosotros</p>
+            </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ Módulos ═══════════════════════════════════════════════
+           Bento asimétrico: el bono de IA (el foco, es lo que cambia con
+           la oferta) ocupa la fila completa; los 6 módulos van debajo en
+           dos filas de tres. Nunca 6 tarjetas idénticas en fila.
+      -->
+      <section id="modulos" class="seccion" data-block="services-grid" data-pitch>
+        <div class="contenedor">
+          <!-- Sin data-revelar a propósito: el título de sección no debe
+               depender de terminar una animación de fundido para verse —
+               con scroll rápido (rueda de mouse a alta velocidad) medí
+               con Playwright que la transición tarda ~1s en llegar a
+               opacity:1, tiempo de sobra para pasarlo de largo y
+               percibirlo como "no aparece". El resto del contenido de la
+               sección (bono, módulos) sigue animando normal. -->
+          <h2 class="font-display text-center text-[1.75rem] titulo-marca md:text-[2.25rem]">
+            Lo que vas a recibir
+          </h2>
+
+          <!-- Con oferta activa: bono grande a la izquierda (~25%, mismo
+               estilo que un botón — fondo lleno, texto blanco, glow) + los
+               6 módulos a la derecha. Al vencer, el bono desaparece del
+               DOM entero (data-oferta-estado) y data-modulos-grid pierde
+               la columna lateral: solo queda el grid de 3 columnas. -->
+          <div class="mt-[var(--spacing-lg)] gap-[var(--spacing-md)]" data-modulos-grid data-revelar>
+            <article
+              data-oferta-estado="activa"
+              data-revelar="escala"
+              class="tarjeta mb-[var(--spacing-md)] flex min-h-full flex-col justify-between gap-[var(--spacing-2xs)] text-center lg:mb-0 lg:text-left"
+              style="
+                background: var(--accion);
+                color: var(--accion-texto);
+                border-color: transparent;
+                box-shadow: 0 0 32px -8px var(--color-primario);
+              "
+            >
+              <div class="flex flex-col gap-[var(--spacing-2xs)]">
+                <p class="text-xs font-semibold tracking-[0.08em] uppercase" style="color: rgba(255, 255, 255, 0.8)">
+                  Bono destacado
+                </p>
+                <h3 class="font-display text-[1.4rem] leading-tight">Módulo de Inteligencia Artificial</h3>
+                <p class="text-sm" style="color: rgba(255, 255, 255, 0.85)">
+                  Guiones, research y flujo de trabajo con IA aplicados a edición de video.
+                </p>
+                <!-- Dos contenedores: el de afuera (imagen-resplandor) es
+                     el que necesita asomarse fuera de la caja para el
+                     círculo degradé; el de adentro sigue con
+                     overflow-hidden, que recorta el scale-up de lg: sin
+                     que se salga de la tarjeta ni empuje al resto del
+                     contenido — "amplía la imagen un 30%" sin romper el
+                     layout. -->
+                <div class="imagen-resplandor imagen-resplandor--blanca">
+                  <div class="overflow-hidden rounded-[var(--radius-md)]">
+                    <img
+                      src="/modulos/ai-front.webp"
+                      alt=""
+                      width="1000"
+                      height="667"
+                      loading="lazy"
+                      decoding="async"
+                      class="w-full lg:scale-[1.3]"
+                    />
+                  </div>
+                </div>
+              </div>
+              <!-- Mismo tratamiento que el contador del banner de arriba:
+                   etiqueta pequeña + número grande. Margen superior a otra
+                   mitad (spacing-2xs → spacing-3xs): es el espacio que
+                   queda debajo de la imagen AI FRONT. -->
+              <div class="mt-[var(--spacing-3xs)]">
+                <p class="text-xs font-semibold tracking-[0.08em] uppercase" style="color: rgba(255, 255, 255, 0.8)">
+                  Incluido gratis — termina en
+                </p>
+                <p class="font-display mt-[var(--spacing-3xs)] text-2xl tabular-nums">
+                  <span data-cuenta-regresiva>24:00:00</span>
+                </p>
+              </div>
+            </article>
+
+            <div class="grid gap-[var(--spacing-md)] md:grid-cols-2 lg:grid-cols-3">
+              <article class="tarjeta" data-revelar data-revelar-retraso="0">
+                <p class="text-sm text-[var(--texto-secundario)]">Módulo 1</p>
+                <h3 class="font-display mt-[var(--spacing-3xs)] text-[1.15rem] titulo-marca">
+                  Introducción y mentalidad
+                </h3>
+                <p class="mt-[var(--spacing-3xs)] text-[var(--texto-secundario)]">
+                  El criterio de un editor profesional, antes de tocar cualquier software.
+                </p>
+              </article>
+
+              <article class="tarjeta" data-revelar data-revelar-retraso="1">
+                <p class="text-sm text-[var(--texto-secundario)]">Módulo 2</p>
+                <h3 class="font-display mt-[var(--spacing-3xs)] text-[1.15rem] titulo-marca">
+                  Herramientas de edición
+                </h3>
+                <p class="mt-[var(--spacing-3xs)] text-[var(--texto-secundario)]">
+                  Las herramientas con las que vas a editar de forma profesional.
+                </p>
+              </article>
+
+              <article class="tarjeta" data-revelar data-revelar-retraso="2">
+                <p class="text-sm text-[var(--texto-secundario)]">Módulo 3</p>
+                <h3 class="font-display mt-[var(--spacing-3xs)] text-[1.15rem] titulo-marca">
+                  Fundamentos y optimización
+                </h3>
+                <p class="mt-[var(--spacing-3xs)] text-[var(--texto-secundario)]">
+                  Los conceptos básicos y la columna vertebral de cualquier video.
+                </p>
+              </article>
+
+              <article class="tarjeta" data-revelar data-revelar-retraso="0">
+                <p class="text-sm text-[var(--texto-secundario)]">Módulo 4</p>
+                <h3 class="font-display mt-[var(--spacing-3xs)] text-[1.15rem] titulo-marca">Guion y preproducción</h3>
+                <p class="mt-[var(--spacing-3xs)] text-[var(--texto-secundario)]">
+                  Guiones con IA y preproducción antes de grabar.
+                </p>
+              </article>
+
+              <article class="tarjeta" data-revelar data-revelar-retraso="1">
+                <p class="text-sm text-[var(--texto-secundario)]">Módulo 5</p>
+                <h3 class="font-display mt-[var(--spacing-3xs)] text-[1.15rem] titulo-marca">CapCut para PC</h3>
+                <p class="mt-[var(--spacing-3xs)] text-[var(--texto-secundario)]">
+                  Edición profesional en la herramienta más usada por creadores.
+                </p>
+              </article>
+
+              <article class="tarjeta" data-revelar data-revelar-retraso="2">
+                <p class="text-sm text-[var(--texto-secundario)]">Módulo 6</p>
+                <h3 class="font-display mt-[var(--spacing-3xs)] text-[1.15rem] titulo-marca">Premiere Pro para redes</h3>
+                <p class="mt-[var(--spacing-3xs)] text-[var(--texto-secundario)]">
+                  La herramienta más potente de edición de video, aplicada a redes.
+                </p>
+              </article>
+            </div>
+          </div>
+
+          <h3 class="font-display mt-[var(--spacing-lg)] text-center text-[1.15rem]" data-revelar>
+            <span class="text-white">Bonos</span> <span class="titulo-marca uppercase">incluidos</span>
+          </h3>
+          <!-- Slider en móvil, igual que los videos de testimonios
+               (misma clase .carrusel-videos: scroll-snap horizontal, sin
+               barra visible); grid de 3 desde md:. -->
+          <div class="carrusel-videos mt-[var(--spacing-sm)] flex snap-x snap-mandatory gap-[var(--spacing-md)] overflow-x-auto pb-[var(--spacing-2xs)] md:grid md:grid-cols-3 md:overflow-visible md:pb-0">
+            <article class="tarjeta w-[68%] shrink-0 snap-center md:w-auto" data-revelar data-revelar-retraso="0">
+              <div class="imagen-resplandor mb-[2px]">
+                <img
+                  src="/bonos/bono-2.webp"
+                  alt=""
+                  width="700"
+                  height="467"
+                  loading="lazy"
+                  decoding="async"
+                  class="w-full rounded-[var(--radius-md)]"
+                />
+              </div>
+              <h4 class="font-display text-[1.05rem] titulo-marca">Clase de miniaturas</h4>
+              <p class="mt-[var(--spacing-3xs)] text-[var(--texto-secundario)]">
+                Plantillas y método para miniaturas que sí generan clics.
+              </p>
+            </article>
+            <article class="tarjeta w-[68%] shrink-0 snap-center md:w-auto" data-revelar data-revelar-retraso="1">
+              <div class="imagen-resplandor mb-[2px]">
+                <img
+                src="/bonos/bono-3.webp"
+                alt=""
+                width="700"
+                height="467"
+                loading="lazy"
+                decoding="async"
+                  class="w-full rounded-[var(--radius-md)]"
+                />
+              </div>
+              <h4 class="font-display text-[1.05rem] titulo-marca">Módulo de Ganchos Virales</h4>
+              <p class="mt-[var(--spacing-3xs)] text-[var(--texto-secundario)]">
+                Los primeros 3 segundos que deciden si alguien se queda o se va.
+              </p>
+            </article>
+            <article class="tarjeta w-[68%] shrink-0 snap-center md:w-auto" data-revelar data-revelar-retraso="2">
+              <div class="imagen-resplandor mb-[2px]">
+                <img
+                src="/bonos/bono-1.webp"
+                alt=""
+                width="700"
+                height="467"
+                loading="lazy"
+                decoding="async"
+                  class="w-full rounded-[var(--radius-md)]"
+                />
+              </div>
+              <h4 class="font-display text-[1.05rem] titulo-marca">Presets de Premiere Pro</h4>
+              <p class="mt-[var(--spacing-3xs)] text-[var(--texto-secundario)]">
+                Ajustes listos para color y ritmo, para no partir de cero cada vez.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ Testimonios ═══════════════════════════════════════════
+           Videos verticales (son Shorts) reproducibles ahí mismo: facade
+           propio, sin iframe hasta que se pulsa play (src/lib/testimonios.ts).
+      -->
+      <section id="testimonios" class="seccion fondo-degradado" data-block="testimonials" data-pitch>
+        <div class="contenedor">
+          <div class="flex flex-col items-center gap-[var(--spacing-2xs)] text-center" data-revelar>
+            <h2 class="font-display text-[1.75rem] titulo-marca md:text-[2.25rem]">Lo que dicen de nosotros</h2>
+            <p class="text-lg font-semibold titulo-marca">
+              ★★★★★ <span class="text-base font-normal text-[var(--texto-secundario)]">4.96</span>
+            </p>
+          </div>
+
+          <!-- Móvil: carrusel horizontal con scroll-snap, una tarjeta a la
+               vez — 4 tarjetas verticales en fila ocupan demasiada
+               pantalla. Desktop (md:): grid de 4, como antes. -->
+          <div class="carrusel-videos mt-[var(--spacing-md)] mb-[var(--spacing-lg)] flex snap-x snap-mandatory gap-[var(--spacing-sm)] overflow-x-auto pb-[var(--spacing-2xs)] md:mb-[var(--spacing-xl)] md:grid md:grid-cols-4 md:overflow-visible md:pb-0">
+            <!-- Video nativo autoalojado, sin YouTube: el <video> arranca
+                 con controls puesto (fail-open — si el JS no corre, el
+                 navegador igual deja reproducirlo) y lib/testimonios.ts se
+                 lo quita recién cuando el botón y la barra ya funcionan.
+                 Con IntersectionObserver: mientras la tarjeta está a la
+                 vista se repite en bucle, mudo, de fondo — el botón de
+                 play se queda encima como invitación. Al hacer clic vuelve
+                 al segundo 0 y reproduce con sonido una sola vez, no
+                 continúa desde donde iba el bucle. -->
+            <div class="w-[68%] shrink-0 snap-center md:w-auto" data-revelar data-revelar-retraso="0">
+              <div
+                class="reproductor relative overflow-hidden bg-black"
+                style="aspect-ratio: 9 / 16"
+                data-reproductor="valentina"
+              >
+                <video
+                  class="reproductor__video absolute inset-0 h-full w-full object-cover"
+                  data-reproductor-video
+                  controls
+                  controlslist="nodownload noplaybackrate"
+                  playsinline
+                  muted
+                  preload="metadata"
+                  poster="/testimonios/valentina-rojas.webp"
+                  width="720"
+                  height="1280"
+                  aria-label="Video testimonio de Valentina Rojas"
+                >
+                  <source src="/testimonios/valentina-rojas.mp4" type="video/mp4" />
+                </video>
+                <button type="button" class="reproductor__boton" data-reproductor-boton aria-label="Reproducir video de Valentina Rojas">
+                  <svg data-icono-play width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                  <svg data-icono-pausa style="display: none" width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M7 5h4v14H7zM13 5h4v14h-4z" />
+                  </svg>
+                </button>
+                <div class="absolute inset-x-0 bottom-0 z-[1]">
+                  <div
+                    class="reproductor__barra"
+                    data-reproductor-barra
+                    role="progressbar"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-valuenow="0"
+                    aria-label="Progreso del video"
+                  >
+                    <div class="reproductor__barra-relleno" data-reproductor-relleno></div>
+                  </div>
+                  <p class="reproductor__nombre font-display px-[var(--spacing-2xs)] py-[var(--spacing-3xs)] text-sm text-white">
+                    Valentina Rojas
+                  </p>
+                </div>
+              </div>
+              <div class="mt-[var(--spacing-2xs)] flex items-center justify-between">
+                <span class="titulo-marca text-sm" aria-hidden="true">★★★★★</span>
+                <span class="text-sm text-[var(--texto-secundario)]">4.8</span>
+              </div>
+            </div>
+
+            <div class="w-[68%] shrink-0 snap-center md:w-auto" data-revelar data-revelar-retraso="1">
+              <div
+                class="reproductor relative overflow-hidden bg-black"
+                style="aspect-ratio: 9 / 16"
+                data-reproductor="david"
+              >
+                <video
+                  class="reproductor__video absolute inset-0 h-full w-full object-cover"
+                  data-reproductor-video
+                  controls
+                  controlslist="nodownload noplaybackrate"
+                  playsinline
+                  muted
+                  preload="metadata"
+                  poster="/testimonios/david-prieto.webp"
+                  width="720"
+                  height="1280"
+                  aria-label="Video testimonio de David Prieto"
+                >
+                  <source src="/testimonios/david-prieto.mp4" type="video/mp4" />
+                </video>
+                <button type="button" class="reproductor__boton" data-reproductor-boton aria-label="Reproducir video de David Prieto">
+                  <svg data-icono-play width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                  <svg data-icono-pausa style="display: none" width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M7 5h4v14H7zM13 5h4v14h-4z" />
+                  </svg>
+                </button>
+                <div class="absolute inset-x-0 bottom-0 z-[1]">
+                  <div
+                    class="reproductor__barra"
+                    data-reproductor-barra
+                    role="progressbar"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-valuenow="0"
+                    aria-label="Progreso del video"
+                  >
+                    <div class="reproductor__barra-relleno" data-reproductor-relleno></div>
+                  </div>
+                  <p class="reproductor__nombre font-display px-[var(--spacing-2xs)] py-[var(--spacing-3xs)] text-sm text-white">
+                    David Prieto
+                  </p>
+                </div>
+              </div>
+              <div class="mt-[var(--spacing-2xs)] flex items-center justify-between">
+                <span class="titulo-marca text-sm" aria-hidden="true">★★★★★</span>
+                <span class="text-sm text-[var(--texto-secundario)]">5.0</span>
+              </div>
+            </div>
+
+            <div class="w-[68%] shrink-0 snap-center md:w-auto" data-revelar data-revelar-retraso="2">
+              <div
+                class="reproductor relative overflow-hidden bg-black"
+                style="aspect-ratio: 9 / 16"
+                data-reproductor="juan"
+              >
+                <video
+                  class="reproductor__video absolute inset-0 h-full w-full object-cover"
+                  data-reproductor-video
+                  controls
+                  controlslist="nodownload noplaybackrate"
+                  playsinline
+                  muted
+                  preload="metadata"
+                  poster="/testimonios/juan-guzman.webp"
+                  width="720"
+                  height="1280"
+                  aria-label="Video testimonio de Juan Guzmán"
+                >
+                  <source src="/testimonios/juan-guzman.mp4" type="video/mp4" />
+                </video>
+                <button type="button" class="reproductor__boton" data-reproductor-boton aria-label="Reproducir video de Juan Guzmán">
+                  <svg data-icono-play width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                  <svg data-icono-pausa style="display: none" width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M7 5h4v14H7zM13 5h4v14h-4z" />
+                  </svg>
+                </button>
+                <div class="absolute inset-x-0 bottom-0 z-[1]">
+                  <div
+                    class="reproductor__barra"
+                    data-reproductor-barra
+                    role="progressbar"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-valuenow="0"
+                    aria-label="Progreso del video"
+                  >
+                    <div class="reproductor__barra-relleno" data-reproductor-relleno></div>
+                  </div>
+                  <p class="reproductor__nombre font-display px-[var(--spacing-2xs)] py-[var(--spacing-3xs)] text-sm text-white">
+                    Juan Guzmán
+                  </p>
+                </div>
+              </div>
+              <div class="mt-[var(--spacing-2xs)] flex items-center justify-between">
+                <span class="titulo-marca text-sm" aria-hidden="true">★★★★★</span>
+                <span class="text-sm text-[var(--texto-secundario)]">4.6</span>
+              </div>
+            </div>
+
+            <div class="w-[68%] shrink-0 snap-center md:w-auto" data-revelar data-revelar-retraso="0">
+              <div
+                class="reproductor relative overflow-hidden bg-black"
+                style="aspect-ratio: 9 / 16"
+                data-reproductor="juanita"
+              >
+                <video
+                  class="reproductor__video absolute inset-0 h-full w-full object-cover"
+                  data-reproductor-video
+                  controls
+                  controlslist="nodownload noplaybackrate"
+                  playsinline
+                  muted
+                  preload="metadata"
+                  poster="/testimonios/juanita-gomez.webp"
+                  width="720"
+                  height="1232"
+                  aria-label="Video testimonio de Juanita Gómez"
+                >
+                  <source src="/testimonios/juanita-gomez.mp4" type="video/mp4" />
+                </video>
+                <button type="button" class="reproductor__boton" data-reproductor-boton aria-label="Reproducir video de Juanita Gómez">
+                  <svg data-icono-play width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                  <svg data-icono-pausa style="display: none" width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M7 5h4v14H7zM13 5h4v14h-4z" />
+                  </svg>
+                </button>
+                <div class="absolute inset-x-0 bottom-0 z-[1]">
+                  <div
+                    class="reproductor__barra"
+                    data-reproductor-barra
+                    role="progressbar"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-valuenow="0"
+                    aria-label="Progreso del video"
+                  >
+                    <div class="reproductor__barra-relleno" data-reproductor-relleno></div>
+                  </div>
+                  <p class="reproductor__nombre font-display px-[var(--spacing-2xs)] py-[var(--spacing-3xs)] text-sm text-white">
+                    Juanita Gómez
+                  </p>
+                </div>
+              </div>
+              <div class="mt-[var(--spacing-2xs)] flex items-center justify-between">
+                <span class="titulo-marca text-sm" aria-hidden="true">★★★★★</span>
+                <span class="text-sm text-[var(--texto-secundario)]">5.0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ Preguntas frecuentes ══════════════════════════════════
+           Segmentadas en 3 puntos de dolor: si sirve para mi nivel, qué
+           estoy pagando exactamente, y qué pasa si algo sale mal.
+      -->
+      <section id="preguntas" class="seccion fondo-degradado" data-block="faq" data-pitch>
+        <div class="contenedor">
+          <!-- Sin data-revelar — mismo motivo que el título de #modulos:
+               un título de sección no debe poder "perderse" por un
+               scroll rápido que lo pasa de largo antes de que termine de
+               desvanecerse. -->
+          <h2 class="font-display text-[1.75rem] titulo-marca md:text-[2.25rem]">Preguntas frecuentes</h2>
+
+          <div class="mt-[var(--spacing-xl)] grid gap-[var(--spacing-lg)] lg:grid-cols-3">
+            <div data-revelar data-revelar-retraso="0">
+              <p class="mb-[var(--spacing-2xs)] text-3xl" aria-hidden="true">🎯</p>
+              <h3 class="font-display text-[1.15rem] titulo-marca">Sobre tu nivel</h3>
+              <div class="mt-[var(--spacing-2xs)]" data-faq>
+                <details name="faq">
+                  <summary>¿Sirve si nunca he editado un video?</summary>
+                  <div>
+                    Sí. El Módulo 1 empieza en el criterio de un editor, no en botones de software — está pensado
+                    para alguien que arranca de cero, no solo para quien ya edita y quiere pulir.
+                  </div>
+                </details>
+                <details name="faq">
+                  <summary>¿Necesito tener "buen ojo" o ser creativo de por sí?</summary>
+                  <div>
+                    No. El método enseña a tomar esas decisiones con criterio — ritmo, corte, composición — en vez de
+                    depender de talento previo.
+                  </div>
+                </details>
+                <details name="faq">
+                  <summary>¿Qué necesito para tomar el curso?</summary>
+                  <div>
+                    Premiere Pro y/o CapCut instalados. El Módulo 5 es CapCut para computador y el Módulo 6 es
+                    Premiere Pro — los dos módulos de software están pensados para trabajar desde un computador, no
+                    desde el celular.
+                  </div>
+                </details>
+              </div>
+            </div>
+
+            <div data-revelar data-revelar-retraso="1">
+              <p class="mb-[var(--spacing-2xs)] text-3xl" aria-hidden="true">🏷️</p>
+              <h3 class="font-display text-[1.15rem] titulo-marca">Sobre la oferta y el precio</h3>
+              <div class="mt-[var(--spacing-2xs)]" data-faq>
+                <details name="faq">
+                  <summary>¿Qué incluye el Plan de Edición Total?</summary>
+                  <div>
+                    6 módulos: 4 de fundamentos y criterio de edición que aplican a cualquier programa, 1
+                    especializado en Premiere Pro y 1 en CapCut para computador.
+                  </div>
+                </details>
+                <details name="faq">
+                  <summary>¿Qué pasa si compro después de las 24 horas?</summary>
+                  <div>
+                    El programa completo (6 módulos) sigue costando lo mismo. Lo que cambia es el bono del módulo de
+                    Inteligencia Artificial: viene incluido gratis solo dentro de las primeras 24 horas; después hay
+                    que agregarlo aparte por 27 USD.
+                  </div>
+                </details>
+                <details name="faq">
+                  <summary>¿Es un pago único o hay cuotas?</summary>
+                  <div>Pago único de 38 USD por cada período de 6 meses de acceso. Se renueva automáticamente cada 6 meses; podés cancelar la renovación cuando quieras desde tu cuenta de Hotmart.</div>
+                </details>
+              </div>
+            </div>
+
+            <div data-revelar data-revelar-retraso="2">
+              <p class="mb-[var(--spacing-2xs)] text-3xl" aria-hidden="true">🛍️</p>
+              <h3 class="font-display text-[1.15rem] titulo-marca">Sobre la compra y el acceso</h3>
+              <div class="mt-[var(--spacing-2xs)]" data-faq>
+                <details name="faq">
+                  <summary>¿Cómo recibo el acceso?</summary>
+                  <div>El acceso se entrega por correo electrónico apenas se confirma la compra.</div>
+                </details>
+                <details name="faq">
+                  <summary>¿Qué pasa si no me gusta o no es lo que esperaba?</summary>
+                  <div>Tienes 7 días de garantía. La devolución la gestiona Hotmart de forma automática, no nosotros.</div>
+                </details>
+                <details name="faq">
+                  <summary>¿Es seguro pagar aquí?</summary>
+                  <div>
+                    Sí, totalmente. El pago lo procesa Hotmart, una de las plataformas de venta de cursos más grandes
+                    de Latinoamérica, con cifrado de compra segura de extremo a extremo — aceptan Visa, Mastercard,
+                    PayPal, entre otros.
+                  </div>
+                </details>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ Cierre ════════════════════════════════════════════════ -->
+      <section class="seccion" data-block="cta-band" data-pitch>
+        <div class="contenedor">
+          <div
+            class="tarjeta flex flex-col items-center gap-[var(--spacing-sm)] px-[var(--spacing-2xs)] py-[var(--spacing-xl)] text-center md:px-[var(--spacing-xs)]"
+          >
+            <h2 class="font-display cta-titulo text-white">
+              Del tutorial suelto al método
+              <span style="color: var(--color-primario)">COMPLETO</span>
+            </h2>
+
+            <!-- Bono principal + los 3 módulos. Móvil: apilado (principal
+                 arriba, "+" debajo, los 3 en fila abajo de eso). Desde md:
+                 en fila (principal a la izquierda, "+", los 3 agrupados a
+                 la derecha). Imágenes otro 50% más grandes sobre la
+                 versión anterior (225px → 338px / 315px → los bonos a
+                 473px) — flexbox las achica solo si de verdad no caben. -->
+            <div class="flex w-full flex-col items-center gap-[var(--spacing-sm)] md:flex-row md:justify-center">
+              <div class="w-[80%] max-w-[420px] md:w-[338px]">
+                <div class="imagen-resplandor">
+                  <img
+                  src="/modulos/both-front.webp"
+                  alt=""
+                  width="1000"
+                  height="667"
+                  loading="lazy"
+                  decoding="async"
+                  data-oferta-estado="activa"
+                    class="w-full rounded-[var(--radius-md)]"
+                  />
+                </div>
+                <div class="imagen-resplandor">
+                  <img
+                  src="/modulos/main-front-v2.webp"
+                  alt=""
+                  width="1000"
+                  height="667"
+                  loading="lazy"
+                  decoding="async"
+                  data-oferta-estado="vencida"
+                  hidden
+                    class="w-full rounded-[var(--radius-md)]"
+                  />
+                </div>
+              </div>
+              <span class="mas-modulos flex" aria-hidden="true">+</span>
+              <div class="flex w-full max-w-[630px] justify-center gap-[var(--spacing-2xs)] md:w-auto">
+                <div class="w-[38%] md:w-[473px]">
+                  <div class="imagen-resplandor">
+                    <img
+                    src="/bonos/bono-1.webp"
+                    alt=""
+                    width="700"
+                    height="467"
+                    loading="lazy"
+                    decoding="async"
+                      class="w-full rounded-[var(--radius-md)]"
+                    />
+                  </div>
+                </div>
+                <div class="w-[38%] md:w-[473px]">
+                  <div class="imagen-resplandor">
+                    <img
+                    src="/bonos/bono-2.webp"
+                    alt=""
+                    width="700"
+                    height="467"
+                    loading="lazy"
+                    decoding="async"
+                      class="w-full rounded-[var(--radius-md)]"
+                    />
+                  </div>
+                </div>
+                <div class="w-[38%] md:w-[473px]">
+                  <div class="imagen-resplandor">
+                    <img
+                    src="/bonos/bono-3.webp"
+                    alt=""
+                    width="700"
+                    height="467"
+                    loading="lazy"
+                    decoding="async"
+                      class="w-full rounded-[var(--radius-md)]"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p class="prosa cta-parrafo text-[var(--texto-secundario)]">
+              6 módulos, un solo pago, acceso por 6 meses (renovación automática).
+            </p>
+            <!-- Sin botón acá tampoco: a esta altura de la página el CTA
+                 lleva rato flotando abajo en pantalla, siempre a un toque.
+                 Un botón que apuntara a #precio mandaría al visitante a una
+                 sección que ya no tiene botón — un callejón sin salida. -->
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ══ Pie ═══════════════════════════════════════════════════════
+         Legal poco notorio, texto pequeño, las mismas 4 rutas.
+         SIN `data-pitch`: se ve también en la vista de inicio. Las páginas
+         legales tienen que ser alcanzables desde el primer momento, no solo
+         después de ver un video — es requisito, no preferencia.
+    -->
+    <footer class="border-t border-[var(--linea)] py-[var(--spacing-lg)]" data-block="footer">
+      <div class="contenedor text-center">
+        <!-- Cada enlace lleva una etiqueta corta y una larga: en pantallas
+             angostas se ve la corta (así las 4 caben siempre en una sola
+             fila) y desde md se ve la frase completa. aria-label mantiene
+             el nombre accesible completo en los dos casos. -->
+        <nav class="pie-legal flex flex-row flex-nowrap justify-center gap-[var(--spacing-xs)] text-[var(--texto-secundario)]" aria-label="Legal">
+          <a href="/terminos-y-condiciones/" class="hover:text-[var(--texto-principal)]" aria-label="Términos y condiciones">
+            <span class="pie-legal-corto">Términos</span><span class="pie-legal-largo">Términos y condiciones</span>
+          </a>
+          <a href="/politica-de-cookies/" class="hover:text-[var(--texto-principal)]" aria-label="Política de cookies">
+            <span class="pie-legal-corto">Cookies</span><span class="pie-legal-largo">Política de cookies</span>
+          </a>
+          <a href="/aviso-legal/" class="hover:text-[var(--texto-principal)]" aria-label="Aviso legal">
+            <span class="pie-legal-corto">Legal</span><span class="pie-legal-largo">Aviso legal</span>
+          </a>
+          <a href="/politica-de-privacidad/" class="hover:text-[var(--texto-principal)]" aria-label="Política de privacidad">
+            <span class="pie-legal-corto">Privacidad</span><span class="pie-legal-largo">Política de privacidad</span>
+          </a>
+        </nav>
+        <p class="mt-[var(--spacing-sm)] text-xs text-[var(--texto-secundario)]">
+          © <span data-ano>2026</span> Plan de Edición Total. Todos los derechos reservados.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>
