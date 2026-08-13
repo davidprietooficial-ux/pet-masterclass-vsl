@@ -1,39 +1,34 @@
 /**
- * Checkout de Hotmart en popup, centralizado.
+ * Checkout de Hotmart, precargado y en un modal propio.
  *
- * El fragmento que da Hotmart engancha su widget a cualquier enlace con las
- * clases `hotmart-fb hotmart__button-checkout` y le abre el checkout en una
- * ventana modal (`checkoutMode=2`). Acá se usa ese mismo mecanismo, pero
- * sobre los botones propios: se conservan los estilos de la página y solo se
- * toma el comportamiento.
+ * POR QUÉ NO SE USA EL WIDGET DE HOTMART
  *
- * Tres cosas que este archivo resuelve y que el fragmento suelto no:
+ * El fragmento que da Hotmart carga `widget.min.js`, que a su vez se trae
+ * jQuery y fancybox y recién entonces monta el modal. Medido: entre que se
+ * pide el widget y el checkout está utilizable pasan ~1.7s, y si el
+ * visitante pulsa dentro de esa ventana se queda esperando. Además su hoja
+ * de estilos pisaba el botón y lo volvía verde, lo que obligaba a un
+ * blindaje a base de `!important`.
  *
- * 1. UN SOLO EVENTO PARA EL PIXEL, dispare el botón que dispare.
- *    Hay varios botones de compra en la página (bajo el video, en la franja
- *    flotante, y en la pantalla final). Sin esto, alguien que pulsa dos de
- *    ellos cuenta como dos conversiones y el coste por conversión de la
- *    campaña sale mal. Ver `disparado` más abajo: el evento sale una vez por
- *    sesión, con un `eventID` estable — que es además lo que le permite a
- *    Meta deduplicar si algún día se añade la Conversions API por servidor.
+ * En su lugar, `checkoutMode=10` —que es el modo embebido— se carga en un
+ * iframe oculto en cuanto la compra pasa a ser posible, y al pulsar solo se
+ * hace visible algo que ya está renderizado. El resultado es que el
+ * checkout aparece al instante, sin descargar nada en ese momento.
  *
- * 2. EL WIDGET SE CARGA BAJO DEMANDA, no al abrir la página.
- *    Son dos peticiones a static.hotmart.com (script + hoja de estilos) que
- *    no hacen ninguna falta hasta que la oferta está a la vista. Cargarlas
- *    al entrar penaliza el arranque de la página, que es justo donde se
- *    juega que el visitante se quede a ver la clase.
+ * Y como el modal es nuestro: se ve como el resto del sitio, se cierra con
+ * Escape y con clic fuera, y devuelve el foco donde estaba.
  *
- * 3. EL POPUP ABRE YA EN EL PRIMER CLIC.
- *    El widget se precarga en cuanto la oferta está a la vista. Y si aun así
- *    alguien pulsa antes de que termine de cargar, el clic no se va por el
- *    `href` —que abriría una pestaña nueva en vez del popup—: se frena, se
- *    espera al widget y se repite el clic ya enganchado.
+ * Lo demás que resuelve este archivo:
  *
- * 4. FALLBACK REAL SI EL WIDGET NO CARGA.
- *    Los enlaces conservan su `href` de verdad. Si el script de terceros
- *    falla o está bloqueado, el segundo clic lleva al checkout en una
- *    pestaña nueva en vez de no hacer nada. El fragmento original usa
- *    `onclick="return false;"`, que en ese caso deja el botón muerto.
+ *  · UN SOLO EVENTO PARA EL PIXEL, dispare el botón que dispare. Hay varios
+ *    botones de compra; sin esto, quien pulsa dos cuenta como dos
+ *    conversiones y el coste por conversión de la campaña sale mal. Se emite
+ *    una vez por sesión con un `eventID` estable, que además permite
+ *    deduplicar contra la Conversions API si se añade por servidor.
+ *
+ *  · FALLBACK REAL. Si el iframe no llega a cargar (bloqueador, red caída),
+ *    el clic deja pasar el `href` y el visitante acaba en el checkout de
+ *    Hotmart en una pestaña nueva. Nunca se queda con un botón muerto.
  */
 
 import { ENLACE_OFERTA, ENLACE_REGULAR } from '../datos/oferta';
@@ -41,62 +36,107 @@ import { pitchYaDesbloqueado } from './pitch';
 
 const CLAVE_EVENTO = 'pet-checkout-evento';
 
-/** Las clases con las que el widget de Hotmart reconoce un botón suyo. */
-const CLASES_HOTMART = ['hotmart-fb', 'hotmart__button-checkout'];
-
+let modal: HTMLElement | null = null;
+let marco: HTMLIFrameElement | null = null;
 let cargado = false;
-let listo = false;
-const alEstarListo: Array<() => void> = [];
+let urlCargada = '';
+let devolverFocoA: HTMLElement | null = null;
 
-/**
- * Inyecta el script y la hoja de estilos del widget. Idempotente: se puede
- * llamar tantas veces como haga falta. El callback se ejecuta cuando el
- * script ya está en marcha (o de inmediato, si ya lo estaba).
- *
- * Sin `integrity`: Hotmart publica estos archivos sin versionar y los
- * actualiza en caliente, así que un hash fijo rompería el checkout el día
- * que los cambien. Es la excepción consciente a la regla de SRI del
- * proyecto, y por eso mismo el enlace conserva su href real como respaldo.
- */
-function cargarWidget(despues?: () => void): void {
-  if (listo) {
-    despues?.();
-    return;
-  }
-  if (despues) alEstarListo.push(despues);
-  if (cargado) return;
-  cargado = true;
+// ── El modal ──────────────────────────────────────────────────────────
 
-  const estilos = document.createElement('link');
-  estilos.rel = 'stylesheet';
-  estilos.href = 'https://static.hotmart.com/css/hotmart-fb.min.css';
-  document.head.appendChild(estilos);
+function construirModal(): void {
+  if (modal) return;
 
-  const script = document.createElement('script');
-  script.src = 'https://static.hotmart.com/checkout/widget.min.js';
-  script.async = true;
-  script.addEventListener('load', () => {
-    listo = true;
-    // Un fotograma de margen: el widget engancha los botones al cargar, y
-    // hay que dejarle terminar antes de reintentar el clic.
-    requestAnimationFrame(() => {
-      alEstarListo.splice(0).forEach((fn) => fn());
-    });
+  modal = document.createElement('div');
+  modal.className = 'checkout';
+  modal.hidden = true;
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-label', 'Finalizar compra');
+
+  const caja = document.createElement('div');
+  caja.className = 'checkout__caja';
+
+  const cerrar = document.createElement('button');
+  cerrar.type = 'button';
+  cerrar.className = 'checkout__cerrar';
+  cerrar.setAttribute('aria-label', 'Cerrar');
+  cerrar.textContent = '✕';
+  cerrar.addEventListener('click', ocultarCheckout);
+
+  marco = document.createElement('iframe');
+  marco.className = 'checkout__marco';
+  marco.title = 'Checkout de Hotmart';
+  // allow="payment": sin esto, algunos métodos de pago del checkout no
+  // pueden operar dentro de un iframe.
+  marco.setAttribute('allow', 'payment');
+  marco.setAttribute('loading', 'eager');
+
+  caja.append(cerrar, marco);
+  modal.append(caja);
+
+  // Clic en el velo (fuera de la caja) cierra. Dentro, no.
+  modal.addEventListener('click', (evento) => {
+    if (evento.target === modal) ocultarCheckout();
   });
-  script.addEventListener('error', () => {
-    // Si no carga, los enlaces siguen teniendo su href real: el siguiente
-    // clic lleva al checkout en una pestaña nueva en vez de no hacer nada.
-    listo = false;
-    alEstarListo.length = 0;
-  });
-  document.head.appendChild(script);
+
+  document.body.append(modal);
 }
 
 /**
- * Identificador del evento de conversión. Uno por sesión: si el visitante
- * pulsa dos botones distintos, los dos llevan el mismo id y valen como un
- * solo intento de compra.
+ * Carga el checkout en el iframe oculto. Se llama mucho antes de que el
+ * visitante pulse, así que para entonces ya está renderizado.
+ *
+ * Se recarga solo si el destino cambió: el corte de 24h puede cambiar el
+ * enlace mientras el visitante sigue en la página, y sería un error grave
+ * mostrarle el checkout de la oferta cuando ya venció (o al revés).
  */
+function precargarCheckout(): void {
+  construirModal();
+  if (!marco) return;
+
+  const destino = destinoActual();
+  if (urlCargada === destino) return;
+
+  urlCargada = destino;
+  cargado = false;
+  marco.addEventListener('load', () => (cargado = true), { once: true });
+  marco.src = destino;
+}
+
+/** El enlace que corresponde ahora mismo, según el estado de la oferta. */
+function destinoActual(): string {
+  const boton = document.querySelector<HTMLAnchorElement>('[data-cta-compra]');
+  return boton?.href || ENLACE_OFERTA;
+}
+
+function mostrarCheckout(): void {
+  if (!modal) return;
+  devolverFocoA = document.activeElement as HTMLElement | null;
+
+  modal.hidden = false;
+  document.body.classList.add('con-checkout-abierto');
+
+  const cerrar = modal.querySelector<HTMLButtonElement>('.checkout__cerrar');
+  cerrar?.focus();
+
+  document.addEventListener('keydown', alPulsarTecla);
+}
+
+function ocultarCheckout(): void {
+  if (!modal) return;
+  modal.hidden = true;
+  document.body.classList.remove('con-checkout-abierto');
+  document.removeEventListener('keydown', alPulsarTecla);
+  devolverFocoA?.focus();
+}
+
+function alPulsarTecla(evento: KeyboardEvent): void {
+  if (evento.key === 'Escape') ocultarCheckout();
+}
+
+// ── Conversión ────────────────────────────────────────────────────────
+
 function idEvento(): string {
   try {
     const guardado = window.sessionStorage.getItem(CLAVE_EVENTO);
@@ -114,11 +154,6 @@ function idEvento(): string {
 
 let disparado = false;
 
-/**
- * Emite la conversión una sola vez por sesión. La escuchan lib/tracking.ts
- * (que la reenvía al Pixel de Meta y a GA4 cuando hay consentimiento) y
- * lib/retencion.ts (que la cruza contra la curva del video).
- */
 function emitirConversion(): void {
   if (disparado) return;
   disparado = true;
@@ -130,87 +165,42 @@ function emitirConversion(): void {
   );
 }
 
+// ── Arranque ──────────────────────────────────────────────────────────
+
 export function iniciarCheckout(): void {
   const botones = document.querySelectorAll<HTMLAnchorElement>('[data-cta-compra]');
   if (botones.length === 0) return;
 
   botones.forEach((boton) => {
-    // Las clases del widget se ponen desde acá y no en el HTML: así el
-    // marcado no depende de un detalle de implementación de Hotmart, y si
-    // algún día cambia el nombre de la clase se toca un solo sitio.
-    boton.classList.add(...CLASES_HOTMART);
-
-    let reintentado = false;
-
     boton.addEventListener('click', (evento) => {
       emitirConversion();
 
-      // Widget ya cargado: él intercepta el clic y abre el popup. Acá no
-      // hay nada que hacer.
-      if (listo) return;
+      // Si el iframe no llegó a cargar, no se secuestra el clic: que el
+      // `href` haga su trabajo y el visitante acabe en el checkout de
+      // Hotmart, aunque sea en otra pestaña. Un botón que no hace nada
+      // sería mucho peor.
+      if (!cargado || !modal) return;
 
-      // Todavía no. Sin esto, el primer clic se iba por el `href` y abría
-      // el checkout en una pestaña nueva en vez del popup — que es
-      // exactamente lo que no se quiere. Se frena la navegación, se carga
-      // el widget y se repite el clic cuando ya está enganchado.
-      if (reintentado) return; // el widget falló: que el href haga su trabajo
       evento.preventDefault();
-      reintentado = true;
-
-      cargarWidget(() => boton.click());
+      mostrarCheckout();
     });
   });
 
-  // ── Precarga ────────────────────────────────────────────────────────
-  // Cuando el visitante pulse comprar, no puede quedarse esperando ni un
-  // instante. Así que todo lo que hace falta se trae mucho antes, en tres
-  // momentos escalonados:
-  //
-  //   1. `preconnect` en el <head> — DNS y TLS resueltos desde el arranque,
-  //      sin descargar nada.
-  //   2. Al darle play al video — se carga el widget y se prefetchea el
-  //      documento del checkout. A partir de aquí el visitante va a estar
-  //      varios minutos viendo la clase: tiempo de sobra para que todo esté
-  //      en caché, y sin competir con el arranque de la página.
-  //   3. Al desplegarse la oferta — red de seguridad, por si el evento de
-  //      arranque no llegó (alguien que ya venía desbloqueado de otra
-  //      sesión, por ejemplo).
-  const precargar = (): void => {
-    cargarWidget();
-    prefetchCheckout();
-  };
+  // El checkout se precarga en cuanto la compra pasa a ser posible: al
+  // darle play al video (el visitante va a estar minutos viendo la clase,
+  // tiempo de sobra) o al desplegarse la oferta. Nunca al abrir la página,
+  // que es donde se juega que se quede a ver.
+  document.addEventListener('vsl-arrancado', precargarCheckout, { once: true });
+  document.addEventListener('pitch-desbloqueado', precargarCheckout);
+  if (pitchYaDesbloqueado()) precargarCheckout();
 
-  document.addEventListener('vsl-arrancado', precargar, { once: true });
-  document.addEventListener('pitch-desbloqueado', precargar, { once: true });
-  if (pitchYaDesbloqueado()) precargar();
-}
-
-let prefetcheado = false;
-
-/**
- * Pide por adelantado el documento del checkout, en baja prioridad, para que
- * el iframe que abre el popup lo encuentre ya en caché en vez de tener que
- * ir a buscarlo.
- *
- * Se hace con `<link rel="prefetch">` y no con un iframe oculto a propósito:
- * el iframe cargaría el checkout entero —scripts, estilos, imágenes— y
- * arrancaría la sesión de pago antes de tiempo. El prefetch solo deja el
- * documento en caché y el navegador puede descartarlo si va justo de
- * memoria, que es el comportamiento correcto para algo que quizá no se use.
- */
-function prefetchCheckout(): void {
-  if (prefetcheado) return;
-  prefetcheado = true;
-
-  // Los dos destinos: el visitante puede acabar en cualquiera de los dos
-  // según en qué lado del corte de 24h esté cuando pulse.
-  [ENLACE_OFERTA, ENLACE_REGULAR].forEach((url) => {
-    const link = document.createElement('link');
-    link.rel = 'prefetch';
-    link.as = 'document';
-    link.href = url;
-    document.head.appendChild(link);
+  // El corte de 24h puede cambiar el destino con el visitante todavía en la
+  // página. Se vigila el href del botón, que es donde lib/oferta.ts escribe
+  // el estado, y se recarga el iframe si cambió.
+  const observador = new MutationObserver(() => {
+    if (urlCargada && urlCargada !== destinoActual()) precargarCheckout();
   });
+  botones.forEach((b) => observador.observe(b, { attributes: true, attributeFilter: ['href'] }));
 }
 
 /** Los dos destinos, para que oferta.ts los use sin duplicar las constantes. */

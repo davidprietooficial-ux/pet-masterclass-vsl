@@ -53,12 +53,10 @@
          `preconnect` resuelve el DNS y negocia el TLS por adelantado — unos
          200-300ms en móvil— sin descargar ni un byte y sin enviar ningún
          dato del visitante, así que no es "cargar un tercero": es tener el
-         túnel listo para cuando de verdad haga falta. El resto (el widget y
-         el documento del checkout) se trae lib/checkout.ts en cuanto el
-         visitante le da play, mucho antes de que llegue a pulsar comprar. -->
-    <link rel="preconnect" href="https://static.hotmart.com" crossorigin />
+         túnel listo para cuando de verdad haga falta. El checkout en sí lo
+         carga lib/checkout.ts en un iframe oculto en cuanto el visitante le
+         da play, mucho antes de que llegue a pulsar comprar. -->
     <link rel="preconnect" href="https://pay.hotmart.com" crossorigin />
-    <link rel="dns-prefetch" href="https://static.hotmart.com" />
     <link rel="dns-prefetch" href="https://pay.hotmart.com" />
 
     <meta name="theme-color" content="#171310" />
@@ -818,9 +816,10 @@
            de oferta, centrada, con el botón que redirige.
       -->
       <section id="precio" class="seccion" data-block="pricing" data-pitch>
-        <div class="contenedor flex justify-center">
+        <div class="contenedor">
+          <div class="precio-grid">
             <div
-              class="tarjeta flex w-full max-w-[520px] flex-col gap-[var(--spacing-sm)] text-center"
+              class="tarjeta flex w-full flex-col gap-[var(--spacing-sm)] text-center"
               data-oferta-tarjeta
               data-revelar
             >
@@ -950,12 +949,13 @@
                 Pago seguro procesado por Hotmart · Visa · Mastercard · PayPal · entre otros
               </p>
             </div>
-        </div>
 
-        <!-- Confianza — sellos y medios de pago. Cierra la sección de precio:
-             es lo último que se lee antes de decidir. -->
-        <div class="contenedor">
-          <div class="mt-[var(--spacing-sm)] grid gap-[var(--spacing-sm)] md:grid-cols-4">
+            <!-- Sellos de confianza. En escritorio van en columna a la
+                 derecha del precio (pedido explícito): puestos en fila
+                 debajo quedaban como un pie de página y se leían después de
+                 haber decidido, cuando su trabajo es acompañar la decisión.
+                 En móvil siguen en rejilla de dos, que es lo que cabe. -->
+            <div class="precio-sellos">
             <div class="tarjeta flex flex-col items-center gap-[var(--spacing-2xs)] text-center" data-revelar data-revelar-retraso="0">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" class="titulo-marca" aria-hidden="true">
                 <path
@@ -990,6 +990,7 @@
               </svg>
               <p class="font-semibold titulo-marca">Garantía 7 días</p>
               <p class="text-sm text-[var(--texto-secundario)]">Devolución automática con Hotmart, no con nosotros</p>
+            </div>
             </div>
           </div>
         </div>

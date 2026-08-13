@@ -757,60 +757,141 @@ html:not(.pitch-bloqueado) [data-pitch]:not([data-cta-anclaje]) {
   transform: translateY(1px);
 }
 
-/* ── Blindaje contra los estilos de Hotmart ──────────────────────────
- * El widget de checkout necesita que el enlace lleve sus clases
- * (`hotmart-fb hotmart__button-checkout`) para engancharle el popup, pero
- * su hoja de estilos —que se carga DESPUÉS que la nuestra y no controlamos—
- * viene con el botón verde de Hotmart: fondo, borde, tipografía y una
- * imagen de fondo propia. Sin esto, el botón se vuelve verde en cuanto
- * carga el widget, que es justo lo que pasaba.
+/* ── Sección de precio ───────────────────────────────────────────────
+ * Escritorio: el precio a la izquierda y los sellos en columna a la derecha
+ * (pedido explícito). En fila debajo del precio, los sellos se leían como un
+ * pie de página —después de haber decidido—, cuando su trabajo es acompañar
+ * la decisión mientras se está tomando.
  *
- * Se usa `!important` a propósito, y es de los pocos sitios donde está
- * justificado: no es para ganarle a nuestro propio CSS, sino a una hoja de
- * terceros que puede cambiar sin aviso. Subir la especificidad a mano no
- * bastaría, porque no sabemos con qué selectores va a venir mañana.
+ * Móvil: el precio arriba y los sellos en rejilla de dos, que es lo que cabe
+ * sin que el texto se aplaste.
  */
-a.boton-comprar.hotmart-fb,
-a.boton-comprar.hotmart__button-checkout {
-  background-color: var(--accion) !important;
-  background-image: none !important;
-  color: var(--texto-sobre-accion) !important;
-  border: none !important;
-  font-family: var(--font-cuerpo) !important;
-  text-decoration: none !important;
-  text-transform: none !important;
-  width: 100% !important;
-  max-width: 460px !important;
-  height: auto !important;
-  /* Estas cuatro son las que descolocaban el texto hacia arriba: Hotmart
-     dimensiona su botón con un line-height fijo y padding propio, pensados
-     para su imagen de fondo. Con el texto centrado por flexbox, ese
-     line-height heredado lo sacaba del centro óptico. */
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  line-height: 1.1 !important;
-  padding: var(--spacing-sm) var(--spacing-md) !important;
-  text-indent: 0 !important;
-  vertical-align: middle !important;
-  box-sizing: border-box !important;
+.precio-grid {
+  display: grid;
+  gap: var(--spacing-md);
+  align-items: start;
+  /* Mismo ancho que el reproductor (880px): el bloque de compra se alinea
+     con el video en vez de estirarse a todo el contenedor como la rejilla de
+     módulos de más abajo. Pedido explícito, y de paso las dos piezas
+     principales de la página comparten eje. */
+  max-width: 880px;
+  margin-inline: auto;
 }
-a.boton-comprar.cta--flotante.hotmart-fb,
-a.boton-comprar.cta--flotante.hotmart__button-checkout {
-  padding: var(--spacing-sm) var(--spacing-2xs) !important;
+@media (min-width: 1024px) {
+  .precio-grid {
+    /* La columna de sellos, más estrecha que el precio y estirada a su
+       misma altura (`stretch`): así el bloque se lee como una sola pieza y
+       no como dos cajas sueltas de distinto alto. */
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    align-items: stretch;
+    gap: var(--spacing-md);
+  }
 }
-a.boton-comprar.cta--flotante.hotmart-fb,
-a.boton-comprar.cta--flotante.hotmart__button-checkout {
-  background-color: var(--color-primario) !important;
-  color: #0b0908 !important;
-  width: 80% !important;
-  max-width: none !important;
+
+.precio-sellos {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-sm);
 }
-/* La imagen del botón verde que trae el fragmento de Hotmart, por si el
-   widget la inyectara dentro del enlace. */
-a.boton-comprar img {
-  display: none !important;
+@media (min-width: 1024px) {
+  .precio-sellos {
+    /* Una sola columna, y las cuatro filas repartiendo el alto disponible:
+       es lo que hace que la columna termine exactamente donde termina el
+       panel de precio. */
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(4, 1fr);
+    align-content: stretch;
+  }
+  /* Alineados a la izquierda, no centrados: en columna estrecha, cuatro
+     bloques centrados uno debajo de otro no dan ninguna línea de lectura. */
+  .precio-sellos > * {
+    align-items: flex-start;
+    text-align: left;
+  }
 }
+
+/* ── Modal del checkout ──────────────────────────────────────────────
+ * El checkout va en un iframe propio, precargado y oculto, que al pulsar
+ * solo se hace visible: por eso aparece al instante en vez de tardar los
+ * ~1.7s que tardaba el widget de Hotmart en montarse.
+ *
+ * z-index por encima de todo, incluido el botón flotante y el WhatsApp:
+ * mientras el checkout está abierto, es lo único con lo que se interactúa.
+ */
+.checkout {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-sm);
+  /* Velo opaco y sin desenfoque: al 72% de negro no se percibe nada de lo
+     que hay detrás, así que el blur solo costaba render en móvil. */
+  background: rgb(0 0 0 / 0.82);
+}
+.checkout[hidden] {
+  display: none;
+}
+
+.checkout__caja {
+  position: relative;
+  width: 100%;
+  max-width: 620px;
+  height: min(92vh, 900px);
+  border-radius: var(--radius-lg);
+  background: #fff;
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.55);
+}
+
+.checkout__marco {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* El botón de cerrar va fuera de la caja en pantallas con sitio, y dentro
+   en las que no: encima del checkout tapa el "cambiar país" de Hotmart. */
+.checkout__cerrar {
+  position: absolute;
+  top: var(--spacing-3xs);
+  right: var(--spacing-3xs);
+  z-index: 2;
+  display: flex;
+  height: 32px;
+  width: 32px;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 9999px;
+  background: rgb(0 0 0 / 0.6);
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+@media (min-width: 768px) {
+  .checkout__cerrar {
+    top: calc(-1 * var(--spacing-lg));
+    right: 0;
+    /* Con fondo, no transparente: sobre el velo oscuro una ✕ blanca suelta
+       casi no se distingue, y es el único modo de salir del checkout aparte
+       de Escape. */
+    background: rgb(255 255 255 / 0.15);
+    font-size: 1.25rem;
+  }
+  .checkout__cerrar:hover {
+    background: rgb(255 255 255 / 0.28);
+  }
+}
+
+/* Con el checkout abierto, la página de detrás no se desplaza. */
+body.con-checkout-abierto {
+  overflow: hidden;
+}
+
 
 /* El titileo. NO se usa la clase .parpadeo del sitio (que baja la opacidad
  * al 35%): un botón que se apaga y se enciende se lee como deshabilitado,
