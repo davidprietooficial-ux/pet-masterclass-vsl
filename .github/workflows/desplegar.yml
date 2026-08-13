@@ -1,0 +1,71 @@
+# Compila el sitio y publica el resultado en la rama `deploy`.
+#
+# POR QUÉ HACE FALTA ESTO
+#
+# El "Despliegue desde GitHub" de Hostinger copia los archivos de una rama a
+# public_html tal cual: no ejecuta `npm install` ni `npm run build`. Y en la
+# rama `main` lo que hay es el CÓDIGO FUENTE — el index.html apunta a
+# `/src/main.ts`, que ningún navegador sabe ejecutar. Desplegando main
+# directamente, la página se vería rota.
+#
+# Así que este workflow compila en cada push y deja en la rama `deploy` el
+# contenido de `dist/` (HTML, CSS y JS ya empaquetados, más todo lo de
+# public/: los PHP de la analítica, los videos, las páginas legales).
+#
+# EN HOSTINGER hay que apuntar el despliegue a la rama `deploy`, no a `main`.
+#
+# El repo es privado, así que el token por defecto de Actions basta: no hace
+# falta configurar ningún secreto.
+
+name: Compilar y publicar en deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # también a mano, desde la pestaña Actions
+
+permissions:
+  contents: write # necesario para escribir en la rama deploy
+
+concurrency:
+  group: desplegar
+  cancel-in-progress: true
+
+jobs:
+  compilar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar
+        run: npm run build
+
+      - name: Comprobar que el build salió entero
+        # Si el build falla a medias, mejor parar aquí que publicar un
+        # public_html roto encima del sitio que está funcionando.
+        run: |
+          test -f dist/index.html || { echo "Falta dist/index.html"; exit 1; }
+          grep -q 'src="/assets/' dist/index.html || { echo "El HTML no apunta al JS compilado"; exit 1; }
+          test -f dist/api/retencion.php || { echo "Falta el endpoint de analítica"; exit 1; }
+          test -f dist/api/.htaccess || { echo "Falta el .htaccess de api/"; exit 1; }
+          echo "Build correcto:"
+          du -sh dist
+
+      - name: Publicar en la rama deploy
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: deploy
+          # Sin .nojekyll ni CNAME: esto no es GitHub Pages, es una rama que
+          # Hostinger copia tal cual a public_html.
+          enable_jekyll: true
+          commit_message: 'build: ${{ github.event.head_commit.message }}'
