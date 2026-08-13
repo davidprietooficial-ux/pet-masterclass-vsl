@@ -122,9 +122,33 @@ declare global {
   }
 }
 
-function gtagLocal(...args: unknown[]): void {
+/**
+ * Empuja un comando de gtag al dataLayer.
+ *
+ * ── Por qué esta forma tan rara ──────────────────────────────────────
+ * `gtag.js` NO acepta un Array. Solo reconoce como comando lo que llega
+ * como objeto `arguments`, que es lo que hace el fragmento oficial de
+ * Google (`function gtag(){dataLayer.push(arguments)}`). Un
+ * `dataLayer.push(['config', 'G-…'])` se queda en el array para siempre y
+ * gtag lo ignora — sin excepción, sin aviso en consola, sin nada. El sitio
+ * carga, el script de Google baja, `window.gtag` existe… y no se mide una
+ * sola visita. Verificado con una página aislada: con Array, cero
+ * peticiones a `google-analytics.com/g/collect`; con `arguments`, una.
+ *
+ * En modo estricto no se puede usar `arguments` dentro de una función que
+ * declara parámetros rest, así que la firma tipada va por fuera y por
+ * dentro se aplica sobre una función sin parámetros, donde sí es legal.
+ */
+export function empujarComandoGtag(...args: unknown[]): void {
   window.dataLayer = window.dataLayer ?? [];
-  window.dataLayer.push(args);
+  (function (): void {
+    // eslint-disable-next-line prefer-rest-params
+    window.dataLayer!.push(arguments);
+  }).apply(null, args as []);
+}
+
+function gtagLocal(...args: unknown[]): void {
+  empujarComandoGtag(...args);
 }
 
 export function declararConsentModeInicial(): void {

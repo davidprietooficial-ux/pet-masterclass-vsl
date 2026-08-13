@@ -5,16 +5,23 @@
  * carga un script "por si acaso".
  */
 
-import { alConsentir } from './consentimiento';
+import { alConsentir, empujarComandoGtag } from './consentimiento';
 
 // Vacío = no se carga.
+//
+// GA4 y Clarity van directos, sin pasar por GTM, aunque el contenedor esté
+// soportado más abajo. El motivo es el presupuesto de rendimiento: GTM son
+// unos 90 KB de JavaScript cuya única ventaja es poder añadir etiquetas sin
+// tocar el código, y con solo dos proveedores no compensa — el LCP de esta
+// página está en 2,4s contra un umbral de 2,5s. Si algún día entran Google
+// Ads o TikTok, ahí sí conviene montar GTM y mover estos dos dentro.
 export const IDS = {
   metaPixel: '',
-  ga4: '',
+  ga4: 'G-N5DVH355QC',
   gtm: '',
   googleAds: '',
   tiktokPixel: '',
-  clarity: '',
+  clarity: 'y1u5ks2lp7',
 } as const;
 
 // La CSP trae require-trusted-types-for 'script' + trusted-types
@@ -80,12 +87,13 @@ export function iniciarTracking(): void {
     alConsentir('analitica', 'Google Analytics 4', async () => {
       await cargarScript(`https://www.googletagmanager.com/gtag/js?id=${IDS.ga4}`);
       window.dataLayer = window.dataLayer ?? [];
-      const gtag = (...args: unknown[]): void => {
-        window.dataLayer!.push(args);
-      };
-      window.gtag = gtag;
-      gtag('js', new Date());
-      gtag('config', IDS.ga4, { anonymize_ip: true });
+      // Los comandos van con `empujarComandoGtag`, no con un push de Array:
+      // gtag.js descarta los Array en silencio. Ver el comentario largo en
+      // consentimiento.ts — es el fallo que hacía que GA4 cargara sin llegar
+      // a medir absolutamente nada.
+      window.gtag = empujarComandoGtag;
+      empujarComandoGtag('js', new Date());
+      empujarComandoGtag('config', IDS.ga4, { anonymize_ip: true });
     });
   }
 

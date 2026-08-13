@@ -1,3 +1,9 @@
+# El video de la masterclass. Pesa cientos de MB y GitHub rechaza cualquier
+# archivo de más de 100 MB, así que no puede viajar en el repositorio ni
+# aunque se quisiera: se sube aparte a su alojamiento definitivo, y el
+# <source> de index.html apunta ahí. Ver el encabezado de src/datos/vsl.ts.
+public/vsl/masterclass.mp4
+
 # Dependencias y compilación
 node_modules/
 dist/

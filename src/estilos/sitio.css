@@ -1382,13 +1382,60 @@ html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
   box-shadow: 0 8px 28px rgb(0 0 0 / 0.5);
 }
 
+/* ── Pantalla completa ───────────────────────────────────────────────
+ * Ocupa la esquina inferior derecha; el volumen se corre a su izquierda
+ * (ver el `right` de `.volumen`, que reserva justo este ancho).
+ */
+.vsl__expandir {
+  position: absolute;
+  right: var(--spacing-2xs);
+  bottom: var(--spacing-2xs);
+  z-index: 4;
+  display: none;
+  height: 36px;
+  width: 36px;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 9999px;
+  background: rgb(0 0 0 / 0.55);
+  color: #fff;
+  cursor: pointer;
+}
+/* Igual que los demás controles: solo existe con el video ya arrancado. En
+   la previa el único botón que debe haber es el de empezar. */
+.vsl--reproduciendo .vsl__expandir {
+  display: flex;
+}
+
+/* A pantalla completa el contenedor deja de ser una caja 16:9 dentro de la
+   página y pasa a ser la pantalla entera. Hay que soltarle el aspect-ratio,
+   o se quedaría con una franja negra calculada sobre el ancho del monitor.
+   El video pasa a `contain`: en la página `cover` está bien porque la caja
+   ya es 16:9 y no recorta nada, pero contra la relación de aspecto de un
+   monitor cualquiera sí recortaría — y en una clase de edición, recortar es
+   perder justo lo que se está enseñando. */
+.vsl--completa {
+  aspect-ratio: auto;
+  height: 100%;
+  width: 100%;
+  max-width: none;
+  border: none;
+  border-radius: 0;
+}
+.vsl--completa .vsl__video {
+  object-fit: contain;
+}
+
 /* ── Control de volumen ──────────────────────────────────────────────
  * El icono lo pinta lib/volumen.ts según el estado real (sin sonar, mudo, o
  * con 1-3 ondas por nivel). Acá solo va la forma.
  */
 .volumen {
   position: absolute;
-  right: var(--spacing-2xs);
+  /* Reserva el ancho del botón de pantalla completa, que va pegado al borde.
+     El deslizador se despliega hacia la izquierda, así que no lo pisa. */
+  right: calc(var(--spacing-2xs) + 44px);
   bottom: var(--spacing-2xs);
   z-index: 4;
   display: none;
