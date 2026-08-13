@@ -23,15 +23,21 @@
  *    al entrar penaliza el arranque de la página, que es justo donde se
  *    juega que el visitante se quede a ver la clase.
  *
- * 3. FALLBACK REAL SI EL WIDGET NO CARGA.
- *    Los enlaces llevan su `href` de verdad al checkout de Hotmart. Si el
- *    script de terceros falla, está bloqueado, o el visitante pulsa antes de
- *    que termine de cargar, el clic navega al checkout en una pestaña nueva
- *    en vez de no hacer nada. El fragmento original usa
+ * 3. EL POPUP ABRE YA EN EL PRIMER CLIC.
+ *    El widget se precarga en cuanto la oferta está a la vista. Y si aun así
+ *    alguien pulsa antes de que termine de cargar, el clic no se va por el
+ *    `href` —que abriría una pestaña nueva en vez del popup—: se frena, se
+ *    espera al widget y se repite el clic ya enganchado.
+ *
+ * 4. FALLBACK REAL SI EL WIDGET NO CARGA.
+ *    Los enlaces conservan su `href` de verdad. Si el script de terceros
+ *    falla o está bloqueado, el segundo clic lleva al checkout en una
+ *    pestaña nueva en vez de no hacer nada. El fragmento original usa
  *    `onclick="return false;"`, que en ese caso deja el botón muerto.
  */
 
 import { ENLACE_OFERTA, ENLACE_REGULAR } from '../datos/oferta';
+import { pitchYaDesbloqueado } from './pitch';
 
 const CLAVE_EVENTO = 'pet-checkout-evento';
 
@@ -39,29 +45,51 @@ const CLAVE_EVENTO = 'pet-checkout-evento';
 const CLASES_HOTMART = ['hotmart-fb', 'hotmart__button-checkout'];
 
 let cargado = false;
+let listo = false;
+const alEstarListo: Array<() => void> = [];
 
 /**
  * Inyecta el script y la hoja de estilos del widget. Idempotente: se puede
- * llamar tantas veces como haga falta.
+ * llamar tantas veces como haga falta. El callback se ejecuta cuando el
+ * script ya está en marcha (o de inmediato, si ya lo estaba).
  *
  * Sin `integrity`: Hotmart publica estos archivos sin versionar y los
  * actualiza en caliente, así que un hash fijo rompería el checkout el día
  * que los cambien. Es la excepción consciente a la regla de SRI del
  * proyecto, y por eso mismo el enlace conserva su href real como respaldo.
  */
-function cargarWidget(): void {
+function cargarWidget(despues?: () => void): void {
+  if (listo) {
+    despues?.();
+    return;
+  }
+  if (despues) alEstarListo.push(despues);
   if (cargado) return;
   cargado = true;
-
-  const script = document.createElement('script');
-  script.src = 'https://static.hotmart.com/checkout/widget.min.js';
-  script.async = true;
-  document.head.appendChild(script);
 
   const estilos = document.createElement('link');
   estilos.rel = 'stylesheet';
   estilos.href = 'https://static.hotmart.com/css/hotmart-fb.min.css';
   document.head.appendChild(estilos);
+
+  const script = document.createElement('script');
+  script.src = 'https://static.hotmart.com/checkout/widget.min.js';
+  script.async = true;
+  script.addEventListener('load', () => {
+    listo = true;
+    // Un fotograma de margen: el widget engancha los botones al cargar, y
+    // hay que dejarle terminar antes de reintentar el clic.
+    requestAnimationFrame(() => {
+      alEstarListo.splice(0).forEach((fn) => fn());
+    });
+  });
+  script.addEventListener('error', () => {
+    // Si no carga, los enlaces siguen teniendo su href real: el siguiente
+    // clic lleva al checkout en una pestaña nueva en vez de no hacer nada.
+    listo = false;
+    alEstarListo.length = 0;
+  });
+  document.head.appendChild(script);
 }
 
 /**
@@ -112,19 +140,36 @@ export function iniciarCheckout(): void {
     // algún día cambia el nombre de la clase se toca un solo sitio.
     boton.classList.add(...CLASES_HOTMART);
 
-    boton.addEventListener('click', () => {
+    let reintentado = false;
+
+    boton.addEventListener('click', (evento) => {
       emitirConversion();
-      // El widget ya se encarga de abrir el popup y de cancelar la
-      // navegación. Si no llegó a cargar, el href hace su trabajo y el
-      // visitante acaba igualmente en el checkout.
-      cargarWidget();
+
+      // Widget ya cargado: él intercepta el clic y abre el popup. Acá no
+      // hay nada que hacer.
+      if (listo) return;
+
+      // Todavía no. Sin esto, el primer clic se iba por el `href` y abría
+      // el checkout en una pestaña nueva en vez del popup — que es
+      // exactamente lo que no se quiere. Se frena la navegación, se carga
+      // el widget y se repite el clic cuando ya está enganchado.
+      if (reintentado) return; // el widget falló: que el href haga su trabajo
+      evento.preventDefault();
+      reintentado = true;
+
+      cargarWidget(() => boton.click());
     });
   });
 
-  // El widget se precarga al desplegarse la oferta, no al entrar: para
-  // cuando el visitante llegue a pulsar, ya está listo y el popup abre al
-  // instante en vez de tras una espera.
-  document.addEventListener('pitch-desbloqueado', cargarWidget, { once: true });
+  // El widget se precarga en cuanto la oferta está a la vista, no al entrar
+  // en la página: así, para cuando el visitante llegue a pulsar, ya está
+  // listo y el popup abre al instante.
+  //
+  // Se comprueba el estado además de escuchar el evento: iniciarPitch() corre
+  // antes que esto en main.ts, así que a quien ya venía desbloqueado de otra
+  // sesión el evento se le emite antes de que exista este listener.
+  if (pitchYaDesbloqueado()) cargarWidget();
+  document.addEventListener('pitch-desbloqueado', () => cargarWidget(), { once: true });
 }
 
 /** Los dos destinos, para que oferta.ts los use sin duplicar las constantes. */

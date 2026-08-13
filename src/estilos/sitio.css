@@ -782,6 +782,22 @@ a.boton-comprar.hotmart__button-checkout {
   width: 100% !important;
   max-width: 460px !important;
   height: auto !important;
+  /* Estas cuatro son las que descolocaban el texto hacia arriba: Hotmart
+     dimensiona su botón con un line-height fijo y padding propio, pensados
+     para su imagen de fondo. Con el texto centrado por flexbox, ese
+     line-height heredado lo sacaba del centro óptico. */
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1.1 !important;
+  padding: var(--spacing-sm) var(--spacing-md) !important;
+  text-indent: 0 !important;
+  vertical-align: middle !important;
+  box-sizing: border-box !important;
+}
+a.boton-comprar.cta--flotante.hotmart-fb,
+a.boton-comprar.cta--flotante.hotmart__button-checkout {
+  padding: var(--spacing-sm) var(--spacing-2xs) !important;
 }
 a.boton-comprar.cta--flotante.hotmart-fb,
 a.boton-comprar.cta--flotante.hotmart__button-checkout {
