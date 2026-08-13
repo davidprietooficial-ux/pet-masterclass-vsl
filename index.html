@@ -256,6 +256,96 @@
       </div>
     </div>
 
+    <!-- ══ Puerta de acceso ══════════════════════════════════════════
+         Rellenar el formulario es requisito para ver la clase (pedido del
+         cliente). Hasta entonces esto tapa la página entera.
+
+         Va con `hidden` de serie y lo abre lib/formulario.ts: sin JS no
+         aparece nunca y la clase se ve igual. Es el mismo fail-open que el
+         resto del sitio — nunca se pierde el contenido por no poder
+         ejecutar JS, y el rastreador de Google ve la página completa.
+    -->
+    <div class="puerta" data-puerta hidden>
+      <div class="puerta__caja">
+        <p class="puerta__ojo">Acceso gratuito</p>
+        <h2 class="font-display puerta__titulo">
+          Déjanos tus datos y<br /><span style="color: var(--color-primario)">EMPIEZA LA CLASE</span>
+        </h2>
+        <p class="puerta__nota">Es solo un paso. Después la ves entera, sin cortes.</p>
+
+        <form class="puerta__form" data-form-acceso novalidate aria-busy="false">
+          <!-- Trampa para robots: un humano nunca lo ve ni lo rellena.
+               aria-hidden + tabindex lo sacan también del recorrido de
+               teclado y de los lectores de pantalla. -->
+          <div class="puerta__trampa" aria-hidden="true">
+            <label for="web">No rellenar</label>
+            <input type="text" id="web" name="web" tabindex="-1" autocomplete="off" />
+          </div>
+
+          <label class="puerta__campo">
+            <span>Tu nombre</span>
+            <input type="text" name="nombre" required maxlength="100" autocomplete="given-name" placeholder="Como quieres que te llamemos" />
+          </label>
+
+          <label class="puerta__campo">
+            <span>Tu correo</span>
+            <input type="email" name="email" required maxlength="200" autocomplete="email" placeholder="donde recibes el acceso" />
+          </label>
+
+          <div class="puerta__campo">
+            <span>Tu WhatsApp</span>
+            <div class="puerta__telefono">
+              <select name="pais" required aria-label="Código de país" autocomplete="tel-country-code">
+                  <option value="+57" selected>Colombia +57</option>
+                  <option value="+52">México +52</option>
+                  <option value="+54">Argentina +54</option>
+                  <option value="+56">Chile +56</option>
+                  <option value="+51">Perú +51</option>
+                  <option value="+593">Ecuador +593</option>
+                  <option value="+34">España +34</option>
+                  <option value="+1">Estados Unidos +1</option>
+                  <option value="+58">Venezuela +58</option>
+                  <option value="+591">Bolivia +591</option>
+                  <option value="+598">Uruguay +598</option>
+                  <option value="+595">Paraguay +595</option>
+                  <option value="+506">Costa Rica +506</option>
+                  <option value="+507">Panamá +507</option>
+                  <option value="+502">Guatemala +502</option>
+                  <option value="+1809">Rep. Dominicana +1809</option>
+              </select>
+              <input type="tel" name="telefono" required maxlength="40" autocomplete="tel-national" placeholder="300 000 0000" />
+            </div>
+          </div>
+
+          <label class="puerta__campo">
+            <span>¿Por qué quieres ver la clase?</span>
+            <select name="motivo" required>
+              <option value="" disabled selected>Elige una opción</option>
+                <option value="Quiero editar los videos de mi marca personal">Quiero editar los videos de mi marca personal</option>
+                <option value="Quiero editar para mi negocio y vender más">Quiero editar para mi negocio y vender más</option>
+                <option value="Quiero trabajar como editor y conseguir clientes">Quiero trabajar como editor y conseguir clientes</option>
+                <option value="Ya edito y quiero subir de nivel">Ya edito y quiero subir de nivel</option>
+            </select>
+          </label>
+
+          <p class="puerta__error" data-form-error hidden role="alert"></p>
+
+          <!-- Arranca deshabilitado: lib/formulario.ts lo habilita cuando
+               el formulario está completo. Sin JS nunca se habilitaría, pero
+               sin JS tampoco aparece la puerta, así que no bloquea a nadie. -->
+          <button type="submit" class="boton-comprar puerta__boton" data-form-enviar disabled>
+            VER LA CLASE AHORA
+          </button>
+
+          <p class="puerta__legal">
+            Al continuar aceptas nuestra
+            <a href="/politica-de-privacidad/" target="_blank" rel="noopener noreferrer">política de privacidad</a>.
+            Usamos tus datos para darte acceso y avisarte de novedades del programa.
+          </p>
+        </form>
+      </div>
+    </div>
+
     <!-- ══ WhatsApp flotante ═════════════════════════════════════════
          Lleva `data-pitch`: en la vista de inicio no existe. Mientras el
          visitante está viendo la clase no hay nada que preguntar todavía, y

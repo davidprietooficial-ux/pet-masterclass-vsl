@@ -810,6 +810,184 @@ html:not(.pitch-bloqueado) [data-pitch]:not([data-cta-anclaje]) {
   }
 }
 
+/* ── Puerta de acceso ────────────────────────────────────────────────
+ * Tapa la página hasta que el visitante deja sus datos. Con la clase
+ * `con-puerta` en el <html>, el fondo no se desplaza: si se pudiera hacer
+ * scroll por detrás, la puerta se leería como un aviso que se puede
+ * ignorar en vez de como un paso obligatorio.
+ */
+.puerta {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-sm);
+  overflow-y: auto;
+  background: color-mix(in srgb, var(--pagina-fondo) 92%, transparent);
+}
+.puerta[hidden] {
+  display: none;
+}
+html.con-puerta {
+  overflow: hidden;
+}
+
+.puerta__caja {
+  width: 100%;
+  max-width: 440px;
+  margin: auto;
+  padding: var(--spacing-lg) var(--spacing-md);
+  border: var(--borde-ancho) solid var(--linea);
+  border-radius: var(--radius-lg);
+  background: var(--elevado-fondo);
+  text-align: center;
+}
+
+.puerta__ojo {
+  margin: 0 0 var(--spacing-3xs);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-primario);
+}
+.puerta__titulo {
+  margin: 0 0 var(--spacing-2xs);
+  font-size: clamp(1.15rem, 0.95rem + 1vw, 1.5rem);
+  line-height: 1.25;
+  color: #fff;
+}
+.puerta__nota {
+  margin: 0 0 var(--spacing-md);
+  font-size: 0.8rem;
+  color: var(--texto-secundario);
+}
+
+.puerta__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  text-align: left;
+}
+
+.puerta__campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3xs);
+}
+.puerta__campo > span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--texto-secundario);
+}
+
+.puerta__form input,
+.puerta__form select {
+  width: 100%;
+  min-height: var(--boton-alto);
+  padding: var(--spacing-2xs) var(--spacing-xs);
+  border: var(--borde-ancho) solid var(--linea);
+  border-radius: var(--radius-md);
+  background: var(--pagina-fondo);
+  color: var(--texto-principal);
+  font-family: var(--font-cuerpo);
+  font-size: 0.95rem; /* 16px reales: por debajo de eso, iOS hace zoom al enfocar */
+}
+.puerta__form input::placeholder {
+  color: color-mix(in srgb, var(--texto-secundario) 65%, transparent);
+}
+.puerta__form input:focus-visible,
+.puerta__form select:focus-visible {
+  outline: var(--foco-grosor) solid var(--foco);
+  outline-offset: 1px;
+}
+.puerta__form input:user-invalid {
+  border-color: var(--estado-error);
+}
+
+/* El prefijo se ajusta a su contenido y el número se queda con el resto:
+   un grid de dos columnas iguales dejaba el desplegable enorme y el campo
+   del número demasiado corto para lo que se escribe en él. */
+.puerta__telefono {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--spacing-2xs);
+}
+.puerta__telefono select {
+  max-width: 9.5rem;
+}
+
+.puerta__error {
+  margin: 0;
+  padding: var(--spacing-2xs);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--estado-error) 15%, transparent);
+  color: var(--estado-error);
+  font-size: 0.8rem;
+}
+
+/* Doble clase para ganarle a `.boton-comprar`, que define su propio latido
+   más abajo en este mismo archivo: con una sola clase ganaba aquella y el
+   botón latía con la animación equivocada. */
+.puerta__boton.boton-comprar {
+  max-width: none;
+  animation: none;
+}
+
+/* Deshabilitado hasta que el formulario esté completo. Se marca con opacidad
+   y `not-allowed`, no ocultándolo: ver el botón apagado dice "falta algo",
+   mientras que un botón que aparece de la nada al terminar deja al visitante
+   sin saber que existía. */
+.puerta__boton.boton-comprar:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.4);
+}
+
+/* El salto, solo cuando ya se puede pulsar. Un botón inerte dando brincos
+   promete algo que no cumple al tocarlo.
+   La pausa larga del keyframe (el salto ocupa el primer 30% del ciclo) es
+   lo que lo hace un acento y no un elemento que rebota sin parar. */
+@keyframes puerta-salto {
+  0%,
+  30%,
+  100% {
+    transform: translateY(0);
+  }
+  10% {
+    transform: translateY(-9px);
+  }
+  20% {
+    transform: translateY(-4px);
+  }
+}
+.puerta__boton.boton-comprar:not(:disabled) {
+  animation: puerta-salto 1.6s ease-in-out infinite;
+}
+
+.puerta__legal {
+  margin: 0;
+  font-size: 0.68rem;
+  line-height: 1.5;
+  color: var(--texto-secundario);
+  text-align: center;
+}
+.puerta__legal a {
+  color: var(--enlace);
+}
+
+/* Fuera de la pantalla, no display:none: un campo oculto con display:none
+   lo ignoran algunos bots, y es justo a ellos a quienes queremos pillar. */
+.puerta__trampa {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
 /* ── Modal del checkout ──────────────────────────────────────────────
  * El checkout va en un iframe propio, precargado y oculto, que al pulsar
  * solo se hace visible: por eso aparece al instante en vez de tardar los
@@ -1971,6 +2149,7 @@ html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
      preferencia pide apagar. Los dos botones se siguen viendo igual, solo
      dejan de latir. */
   .vsl__arrancar::after,
+  .puerta__boton.boton-comprar:not(:disabled),
   .boton-comprar,
   .boton-comprar.cta--flotante,
   .cta--flotante .boton-comprar__texto,

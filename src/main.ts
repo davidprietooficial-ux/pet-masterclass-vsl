@@ -28,6 +28,7 @@ import { iniciarVolumen } from './lib/volumen';
 import { iniciarCheckout } from './lib/checkout';
 import { iniciarBannersVideo } from './lib/banner-video';
 import { iniciarCifras } from './lib/cifras';
+import { iniciarFormulario } from './lib/formulario';
 import { iniciarTracking, registrarConversiones } from './lib/tracking';
 
 // ── Preguntas frecuentes ──────────────────────────────────────────────
@@ -75,6 +76,10 @@ function iniciar(): void {
   document.documentElement.classList.remove('no-js');
 
   iniciarConsentimiento();
+
+  // La puerta primero: si el visitante aún no se registró, es lo único
+  // con lo que puede interactuar.
+  iniciarFormulario();
 
   // El reproductor primero: pitch.ts y retencion.ts se cuelgan del mismo
   // <video>, y conviene que el elemento ya esté enganchado y sin los
