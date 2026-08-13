@@ -10,16 +10,18 @@
 /**
  * Los dos destinos de compra, en Hotmart.
  *
- * `checkoutMode=2` es lo que hace que el widget abra el checkout en una
- * ventana modal encima de la página en vez de navegar fuera. Es el modo del
- * fragmento que pasó el cliente, y el que usa lib/checkout.ts.
+ * `checkoutMode=10` es el checkout embebido, y es el que el widget abre en la
+ * ventana modal. Se probaron los dos modos contra el servicio real: los dos
+ * abren el popup, pero el 10 queda más limpio dentro de él — sin la barra de
+ * cabecera con el logo de Hotmart que trae el 2, y con el método de pago ya
+ * a la vista sin tener que desplazarse.
  *
- * `off=` es el código de la oferta. El de abajo (1oaqxr4m) es el promocional
- * que incluye el bono de IA, y es el que se muestra durante las 24h.
+ * `off=` es el código de la oferta. 1oaqxr4m es la promocional de 24h, que
+ * incluye el bono de IA.
  */
 const PRODUCTO = 'D100998112T';
 
-export const ENLACE_OFERTA = `https://pay.hotmart.com/${PRODUCTO}?checkoutMode=2&off=1oaqxr4m`;
+export const ENLACE_OFERTA = `https://pay.hotmart.com/${PRODUCTO}?off=1oaqxr4m&checkoutMode=10`;
 
 /**
  * PENDIENTE DE CONFIRMAR: el cliente solo pasó el enlace de la oferta. Este
@@ -27,7 +29,7 @@ export const ENLACE_OFERTA = `https://pay.hotmart.com/${PRODUCTO}?checkoutMode=2
  * sirve por defecto — pero si el precio regular tiene su propia oferta
  * configurada, hay que poner ese `off=` aquí.
  */
-export const ENLACE_REGULAR = `https://pay.hotmart.com/${PRODUCTO}?checkoutMode=2`;
+export const ENLACE_REGULAR = `https://pay.hotmart.com/${PRODUCTO}?checkoutMode=10`;
 
 export const DURACION_OFERTA_HORAS = 24;
 
