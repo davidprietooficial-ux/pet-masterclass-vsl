@@ -145,6 +145,20 @@ export function iniciarTracking(): void {
  */
 export function registrarConversiones(): void {
   const enviar = (nombre: string, datos: Record<string, unknown> = {}): void => {
+    // El dataLayer va PRIMERO y es el camino principal: con GTM montado,
+    // todo (GA4, Clarity, el Píxel, Google Ads) se configura desde su
+    // interfaz sin volver a tocar este archivo. Cada evento de aquí aparece
+    // en GTM como un disparador con ese nombre.
+    //
+    // Se empuja siempre, haya consentimiento o no: el dataLayer es un array
+    // en memoria de esta misma página, no una petición de red. Quien decide
+    // si eso sale a algún sitio es GTM, que solo llega a cargarse cuando el
+    // banner de cookies da permiso.
+    window.dataLayer = window.dataLayer ?? [];
+    window.dataLayer.push({ event: nombre, ...datos });
+
+    // Y las llamadas directas siguen, para que los eventos no se pierdan si
+    // algún proveedor se configura por ID en vez de por GTM.
     window.gtag?.('event', nombre, datos);
     window.fbq?.('trackCustom', nombre, datos);
     // En Clarity los eventos se convierten en filtros para buscar
