@@ -7,10 +7,15 @@
  */
 
 /**
- * PENDIENTE: la URL /exec del Apps Script, una vez implementado.
- * Ver _archivo-paginas/formulario-clase.gs para el paso a paso.
+ * La URL /exec del Apps Script implementado (FORM VSL PET - AGO 2026).
+ *
+ * Si algún día se cambia el código del script, hay que hacer
+ * Implementar → Gestionar implementaciones → editar → Nueva versión.
+ * Crear una implementación NUEVA genera otra URL y habría que cambiarla
+ * aquí; editando la existente, esta sigue valiendo.
  */
-export const ENDPOINT_FORMULARIO = 'https://script.google.com/macros/s/PENDIENTE/exec';
+export const ENDPOINT_FORMULARIO =
+  'https://script.google.com/macros/s/AKfycbxvVabzW17iPjMFuA8j-QOkYxdRXccKCJkrAE050caLri-l8dA9WK7wCdrYBOWYWD_X/exec';
 
 /**
  * No es un secreto de verdad: viaja en el HTML, a la vista de cualquiera.
