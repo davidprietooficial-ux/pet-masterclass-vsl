@@ -757,6 +757,45 @@ html:not(.pitch-bloqueado) [data-pitch]:not([data-cta-anclaje]) {
   transform: translateY(1px);
 }
 
+/* ── Blindaje contra los estilos de Hotmart ──────────────────────────
+ * El widget de checkout necesita que el enlace lleve sus clases
+ * (`hotmart-fb hotmart__button-checkout`) para engancharle el popup, pero
+ * su hoja de estilos —que se carga DESPUÉS que la nuestra y no controlamos—
+ * viene con el botón verde de Hotmart: fondo, borde, tipografía y una
+ * imagen de fondo propia. Sin esto, el botón se vuelve verde en cuanto
+ * carga el widget, que es justo lo que pasaba.
+ *
+ * Se usa `!important` a propósito, y es de los pocos sitios donde está
+ * justificado: no es para ganarle a nuestro propio CSS, sino a una hoja de
+ * terceros que puede cambiar sin aviso. Subir la especificidad a mano no
+ * bastaría, porque no sabemos con qué selectores va a venir mañana.
+ */
+a.boton-comprar.hotmart-fb,
+a.boton-comprar.hotmart__button-checkout {
+  background-color: var(--accion) !important;
+  background-image: none !important;
+  color: var(--texto-sobre-accion) !important;
+  border: none !important;
+  font-family: var(--font-cuerpo) !important;
+  text-decoration: none !important;
+  text-transform: none !important;
+  width: 100% !important;
+  max-width: 460px !important;
+  height: auto !important;
+}
+a.boton-comprar.cta--flotante.hotmart-fb,
+a.boton-comprar.cta--flotante.hotmart__button-checkout {
+  background-color: var(--color-primario) !important;
+  color: #0b0908 !important;
+  width: 80% !important;
+  max-width: none !important;
+}
+/* La imagen del botón verde que trae el fragmento de Hotmart, por si el
+   widget la inyectara dentro del enlace. */
+a.boton-comprar img {
+  display: none !important;
+}
+
 /* El titileo. NO se usa la clase .parpadeo del sitio (que baja la opacidad
  * al 35%): un botón que se apaga y se enciende se lee como deshabilitado,
  * que es justo lo contrario de lo que tiene que comunicar. Acá late el
@@ -1362,33 +1401,57 @@ html:not(.pitch-bloqueado) [data-block='oferta-banner'] {
  * video se salía por encima y quedaba cortado exactamente donde se veía la
  * franja negra. Moviendo la sección, el video nunca se sale de ella.
  */
-[data-block='hero-vsl'] {
+/* El envoltorio del hero: contiene el video de fondo, la sección del hero y
+ * la del botón, para que el fondo cubra las tres cosas. Sube por encima del
+ * hueco que el body reserva para el banner de oferta y recupera ese alto
+ * como padding, así el contenido no se mueve pero el fondo empieza en el
+ * borde de la pantalla.
+ */
+.hero-bloque {
+  position: relative;
   margin-top: calc(-1 * var(--banner-alto, 44px));
-  padding-top: calc(var(--seccion-y) + var(--banner-alto, 44px));
+  padding-top: var(--banner-alto, 44px);
 }
 @media (min-width: 768px) {
-  [data-block='hero-vsl'] {
+  .hero-bloque {
     margin-top: calc(-1 * var(--banner-alto, 56px));
-    padding-top: calc(var(--seccion-y) + var(--banner-alto, 56px));
+    padding-top: var(--banner-alto, 56px);
   }
 }
 
+/* El fondo es `absolute` dentro del envoltorio, no `sticky` con
+ * overflow-clip como antes. Dos motivos, los dos medidos:
+ *
+ *   - absolute se limita solo a su containing block, así que cubre exacto el
+ *     bloque hero + botón y no se sale por abajo. El overflow-clip que hacía
+ *     ese trabajo antes recortaba también el `position: fixed` del botón al
+ *     pasar a la franja inferior, y lo dejaba invisible y sin recibir clics.
+ *   - Y no hace falta sticky: ahora el bloque mide poco más de una pantalla,
+ *     que es justo lo que el sticky servía para cubrir.
+ */
 .hero-fondo {
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  /* Remonta el padding-top completo de la sección (el suyo propio más el
-     hueco del banner) para arrancar en su borde real. */
-  margin-top: calc(-1 * (var(--seccion-y) + var(--banner-alto, 44px)));
-  margin-bottom: -100vh;
+  position: absolute;
+  inset: 0;
   z-index: 0;
+  overflow: hidden;
   background: var(--pagina-fondo);
+  pointer-events: none;
 }
-@media (min-width: 768px) {
-  .hero-fondo {
-    margin-top: calc(-1 * (var(--seccion-y) + var(--banner-alto, 56px)));
-  }
+
+/* El contenido va por encima del fondo. */
+.hero-bloque > section {
+  position: relative;
+  z-index: 1;
 }
+
+/* La sección del hero renuncia a su padding superior estándar: el aire de
+   arriba ya lo ponen el hueco del banner (en .hero-bloque) y el propio
+   .hero-encabezado. Sumando los tres, el ojo se iba a 176px del borde —
+   media pantalla vacía antes del titular. */
+.hero-bloque > [data-block='hero-vsl'] {
+  padding-top: var(--spacing-xs);
+}
+
 .hero-fondo video {
   position: absolute;
   inset: 0;

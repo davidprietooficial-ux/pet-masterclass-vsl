@@ -293,13 +293,7 @@
            que el navegador calcule mal hasta dónde puede "pegarse" el
            sticky; overflow-clip lo recorta a los límites reales de la
            sección. -->
-      <section class="seccion relative overflow-clip" data-block="hero-vsl">
-        <!-- El <source media> solo carga el video desde tablet (768px+): en
-             móvil, que es la mayoría del tráfico, se queda con el poster
-             estático — decodificar un video de fondo ahí, además del VSL que
-             es el que importa, es donde más rendimiento se pierde.
-             autoplay/muted/loop van en el HTML (fail-open, funciona sin JS);
-             main.ts solo lo pausa si se pide menos movimiento. -->
+      <div class="hero-bloque">
         <div class="hero-fondo" aria-hidden="true">
           <video
             data-video-hero
@@ -315,6 +309,13 @@
             <source src="/hero/video-hero-venta.mp4" type="video/mp4" media="(min-width: 768px)" />
           </video>
         </div>
+      <section class="seccion" data-block="hero-vsl">
+        <!-- El <source media> solo carga el video desde tablet (768px+): en
+             móvil, que es la mayoría del tráfico, se queda con el poster
+             estático — decodificar un video de fondo ahí, además del VSL que
+             es el que importa, es donde más rendimiento se pierde.
+             autoplay/muted/loop van en el HTML (fail-open, funciona sin JS);
+             main.ts solo lo pausa si se pide menos movimiento. -->
 
         <div class="relative contenedor flex flex-col items-center gap-[var(--spacing-md)] text-center">
           <div class="hero-encabezado flex flex-col items-center gap-[var(--spacing-sm)] text-center">
@@ -626,6 +627,7 @@
           </div>
         </div>
       </section>
+      </div>
 
       <!-- ══ Antes del pitch ══════════════════════════════════════════
            Esta sección es la única de la página con `data-pre-pitch` en vez
