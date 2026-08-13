@@ -88,7 +88,11 @@
         // ?vista=desplegada — el espejo: la página tal como queda cuando el
         // visitante ya llegó al minuto del pitch, sin tener que ver el video
         // entero para revisarla.
-        if (vista === 'desplegada') {
+        //
+        // ?vista=vencida hace lo mismo y además fuerza el estado post-24h
+        // (eso lo aplica lib/oferta.ts): sin desplegar la página, no habría
+        // nada que mirar de esa franja.
+        if (vista === 'desplegada' || vista === 'vencida') {
           try {
             localStorage.setItem('pet-vsl-pitch', '1');
           } catch (e) {}

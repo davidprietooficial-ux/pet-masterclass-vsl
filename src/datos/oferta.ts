@@ -24,12 +24,12 @@ const PRODUCTO = 'D100998112T';
 export const ENLACE_OFERTA = `https://pay.hotmart.com/${PRODUCTO}?off=1oaqxr4m&checkoutMode=10`;
 
 /**
- * PENDIENTE DE CONFIRMAR: el cliente solo pasó el enlace de la oferta. Este
- * es el mismo producto sin el código promocional, que es lo que Hotmart
- * sirve por defecto — pero si el precio regular tiene su propia oferta
- * configurada, hay que poner ese `off=` aquí.
+ * El de después de las 24h: otro código de oferta (`off=r4q32fqa`) y sin el
+ * bono de IA incluido. El `bid` viene en el enlace que dio el cliente — es
+ * el identificador de la campaña de Hotmart, y se conserva tal cual para que
+ * las ventas de esta franja queden atribuidas donde él las espera.
  */
-export const ENLACE_REGULAR = `https://pay.hotmart.com/${PRODUCTO}?checkoutMode=10`;
+export const ENLACE_REGULAR = `https://pay.hotmart.com/${PRODUCTO}?off=r4q32fqa&checkoutMode=10&bid=1786152546409`;
 
 export const DURACION_OFERTA_HORAS = 24;
 
