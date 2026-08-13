@@ -49,6 +49,18 @@
          Precargarlo lo adelanta sin traerse el video entero. -->
     <link rel="preload" href="/vsl/masterclass-poster.webp" as="image" fetchpriority="high" />
 
+    <!-- Conexión con Hotmart abierta desde el primer momento.
+         `preconnect` resuelve el DNS y negocia el TLS por adelantado — unos
+         200-300ms en móvil— sin descargar ni un byte y sin enviar ningún
+         dato del visitante, así que no es "cargar un tercero": es tener el
+         túnel listo para cuando de verdad haga falta. El resto (el widget y
+         el documento del checkout) se trae lib/checkout.ts en cuanto el
+         visitante le da play, mucho antes de que llegue a pulsar comprar. -->
+    <link rel="preconnect" href="https://static.hotmart.com" crossorigin />
+    <link rel="preconnect" href="https://pay.hotmart.com" crossorigin />
+    <link rel="dns-prefetch" href="https://static.hotmart.com" />
+    <link rel="dns-prefetch" href="https://pay.hotmart.com" />
+
     <meta name="theme-color" content="#171310" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 

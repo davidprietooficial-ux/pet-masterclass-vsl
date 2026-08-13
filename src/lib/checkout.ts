@@ -161,15 +161,56 @@ export function iniciarCheckout(): void {
     });
   });
 
-  // El widget se precarga en cuanto la oferta está a la vista, no al entrar
-  // en la página: así, para cuando el visitante llegue a pulsar, ya está
-  // listo y el popup abre al instante.
+  // ── Precarga ────────────────────────────────────────────────────────
+  // Cuando el visitante pulse comprar, no puede quedarse esperando ni un
+  // instante. Así que todo lo que hace falta se trae mucho antes, en tres
+  // momentos escalonados:
   //
-  // Se comprueba el estado además de escuchar el evento: iniciarPitch() corre
-  // antes que esto en main.ts, así que a quien ya venía desbloqueado de otra
-  // sesión el evento se le emite antes de que exista este listener.
-  if (pitchYaDesbloqueado()) cargarWidget();
-  document.addEventListener('pitch-desbloqueado', () => cargarWidget(), { once: true });
+  //   1. `preconnect` en el <head> — DNS y TLS resueltos desde el arranque,
+  //      sin descargar nada.
+  //   2. Al darle play al video — se carga el widget y se prefetchea el
+  //      documento del checkout. A partir de aquí el visitante va a estar
+  //      varios minutos viendo la clase: tiempo de sobra para que todo esté
+  //      en caché, y sin competir con el arranque de la página.
+  //   3. Al desplegarse la oferta — red de seguridad, por si el evento de
+  //      arranque no llegó (alguien que ya venía desbloqueado de otra
+  //      sesión, por ejemplo).
+  const precargar = (): void => {
+    cargarWidget();
+    prefetchCheckout();
+  };
+
+  document.addEventListener('vsl-arrancado', precargar, { once: true });
+  document.addEventListener('pitch-desbloqueado', precargar, { once: true });
+  if (pitchYaDesbloqueado()) precargar();
+}
+
+let prefetcheado = false;
+
+/**
+ * Pide por adelantado el documento del checkout, en baja prioridad, para que
+ * el iframe que abre el popup lo encuentre ya en caché en vez de tener que
+ * ir a buscarlo.
+ *
+ * Se hace con `<link rel="prefetch">` y no con un iframe oculto a propósito:
+ * el iframe cargaría el checkout entero —scripts, estilos, imágenes— y
+ * arrancaría la sesión de pago antes de tiempo. El prefetch solo deja el
+ * documento en caché y el navegador puede descartarlo si va justo de
+ * memoria, que es el comportamiento correcto para algo que quizá no se use.
+ */
+function prefetchCheckout(): void {
+  if (prefetcheado) return;
+  prefetcheado = true;
+
+  // Los dos destinos: el visitante puede acabar en cualquiera de los dos
+  // según en qué lado del corte de 24h esté cuando pulse.
+  [ENLACE_OFERTA, ENLACE_REGULAR].forEach((url) => {
+    const link = document.createElement('link');
+    link.rel = 'prefetch';
+    link.as = 'document';
+    link.href = url;
+    document.head.appendChild(link);
+  });
 }
 
 /** Los dos destinos, para que oferta.ts los use sin duplicar las constantes. */

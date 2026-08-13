@@ -14,6 +14,7 @@ export const IDS = {
   gtm: '',
   googleAds: '',
   tiktokPixel: '',
+  clarity: '',
 } as const;
 
 // La CSP trae require-trusted-types-for 'script' + trusted-types
@@ -37,6 +38,7 @@ const DOMINIOS_SCRIPT_PERMITIDOS = [
   'https://www.googletagmanager.com/',
   'https://connect.facebook.net/',
   'https://analytics.tiktok.com/',
+  'https://www.clarity.ms/',
 ];
 const politicaScripts = window.trustedTypes?.createPolicy('scripts-analitica', {
   createScriptURL: (url) => {
@@ -68,6 +70,7 @@ declare global {
     fbq?: (...args: unknown[]) => void;
     gtag?: (...args: unknown[]) => void;
     ttq?: { load: (id: string) => void; page: () => void };
+    clarity?: ((...args: unknown[]) => void) & { q?: unknown[] };
   }
 }
 
@@ -112,6 +115,28 @@ export function iniciarTracking(): void {
       window.ttq?.page();
     });
   }
+
+  // ── Microsoft Clarity · categoría analítica ─────────────────────────
+  // Grabaciones de sesión y mapas de calor: es lo que permite VER dónde se
+  // atasca la gente, no solo contarlo. Va en 'analitica' y no en
+  // 'marketing' porque no construye perfiles publicitarios ni comparte los
+  // datos con una red de anuncios.
+  //
+  // La cola `clarity.q` es el patrón del propio Clarity: deja registrar
+  // eventos desde el primer instante aunque su script todavía esté
+  // cargando, y él los procesa al arrancar. Sin ella, los eventos que se
+  // disparen en ese hueco se pierden.
+  if (IDS.clarity) {
+    alConsentir('analitica', 'Microsoft Clarity', async () => {
+      const cola: unknown[] = [];
+      const clarity = ((...args: unknown[]) => {
+        cola.push(args);
+      }) as NonNullable<Window['clarity']>;
+      clarity.q = cola;
+      window.clarity = clarity;
+      await cargarScript(`https://www.clarity.ms/tag/${IDS.clarity}`);
+    });
+  }
 }
 
 /**
@@ -122,6 +147,11 @@ export function registrarConversiones(): void {
   const enviar = (nombre: string, datos: Record<string, unknown> = {}): void => {
     window.gtag?.('event', nombre, datos);
     window.fbq?.('trackCustom', nombre, datos);
+    // En Clarity los eventos se convierten en filtros para buscar
+    // grabaciones: "enséñame las sesiones de quien pulsó comprar" o "las de
+    // quien llegó al pitch". Es lo que hace útiles las grabaciones, en vez
+    // de tener que verlas todas.
+    window.clarity?.('event', nombre);
   };
 
   document.addEventListener('conversion', (e) => {
@@ -162,4 +192,51 @@ export function registrarConversiones(): void {
   document.querySelectorAll<HTMLAnchorElement>('a[href^="tel:"]').forEach((a) => {
     a.addEventListener('click', () => enviar('clic_telefono'));
   });
+
+  // ── El embudo de esta página ────────────────────────────────────────
+  // Sin estos eventos, en GA4 solo se vería "una visita" y "un clic en
+  // comprar", sin nada en medio. Con ellos se puede responder lo que de
+  // verdad importa para decidir dónde invertir: de cada 100 que entran,
+  // cuántos le dan play, cuántos aguantan hasta el pitch y cuántos compran
+  // — y de qué anuncio venía cada grupo.
+  //
+  // Los mismos eventos llegan a Clarity como filtros, así que se puede
+  // pasar de "el 60% abandona antes del pitch" a ver las grabaciones de
+  // esas sesiones concretas.
+
+  const origen = (): Record<string, string> => {
+    const p = new URLSearchParams(location.search);
+    return {
+      utm_source: p.get('utm_source') ?? '(directo)',
+      utm_campaign: p.get('utm_campaign') ?? '(ninguna)',
+      utm_content: p.get('utm_content') ?? '(ninguno)',
+    };
+  };
+
+  document.addEventListener('vsl-arrancado', () => enviar('vsl_play', origen()), { once: true });
+  document.addEventListener('pitch-desbloqueado', () => enviar('vsl_llego_al_pitch', origen()), {
+    once: true,
+  });
+
+  // Hitos del video: los mismos cortes que usa la analítica propia de
+  // retención, para poder cruzar una contra otra.
+  const video = document.querySelector<HTMLVideoElement>('[data-vsl-video]');
+  if (video) {
+    const vistos = new Set<number>();
+    let midiendo = false;
+    document.addEventListener('vsl-arrancado', () => (midiendo = true), { once: true });
+
+    video.addEventListener('timeupdate', () => {
+      if (!midiendo || !Number.isFinite(video.duration) || video.duration <= 0) return;
+      const pct = Math.floor(((video.currentTime / video.duration) * 100) / 25) * 25;
+      if (pct <= 0 || vistos.has(pct)) return;
+      vistos.add(pct);
+      enviar('vsl_progreso', { porcentaje: pct });
+    });
+
+    video.addEventListener('ended', () => {
+      if (!midiendo) return;
+      enviar('vsl_completo');
+    });
+  }
 }
