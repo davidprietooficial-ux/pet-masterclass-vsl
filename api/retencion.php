@@ -77,13 +77,20 @@ if ($origen !== '') {
 // aunque el servidor deje de interpretar PHP. En Hostinger va en el home,
 // un nivel arriba de public_html. Ver config-retencion.ejemplo.php.
 
-$rutasConfig = [
-    __DIR__ . '/../../config-retencion.php',  // home de Hostinger (recomendado)
-    __DIR__ . '/../config-retencion.php',     // un nivel arriba del docroot
-];
-
+// Se busca subiendo carpeta a carpeta, en vez de con rutas fijas. El motivo
+// es concreto: con dos rutas fijas ('../..' y '../') esto funcionaba mientras
+// el sitio colgaba de public_html, pero al mover la landing a
+// public_html/clase/ apareció un nivel más y el config dejó de encontrarse —
+// la analítica se cayó entera sin que nada más cambiara. Recorriendo hacia
+// arriba, da igual a qué profundidad se despliegue el sitio.
 $config = null;
-foreach ($rutasConfig as $ruta) {
+$dir = __DIR__;
+for ($i = 0; $i < 6; $i++) {
+    $dir = dirname($dir);
+    if ($dir === '/' || $dir === '.') {
+        break;
+    }
+    $ruta = $dir . '/config-retencion.php';
     if (is_readable($ruta)) {
         $config = require $ruta;
         break;

@@ -13,13 +13,18 @@
 
 declare(strict_types=1);
 
-$rutasConfig = [
-    __DIR__ . '/../../config-retencion.php',
-    __DIR__ . '/../config-retencion.php',
-];
-
+// Se busca subiendo carpeta a carpeta y no con rutas fijas: con rutas fijas
+// esto se rompió al mover la landing de public_html/ a public_html/clase/,
+// porque apareció un nivel más de profundidad. Ver el mismo comentario en
+// api/retencion.php.
 $config = null;
-foreach ($rutasConfig as $ruta) {
+$dir = __DIR__;
+for ($i = 0; $i < 6; $i++) {
+    $dir = dirname($dir);
+    if ($dir === '/' || $dir === '.') {
+        break;
+    }
+    $ruta = $dir . '/config-retencion.php';
     if (is_readable($ruta)) {
         $config = require $ruta;
         break;
